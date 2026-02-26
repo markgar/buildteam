@@ -8,7 +8,7 @@ All git commands run against this file's repo, not the caller's cwd.
 import os
 import subprocess
 
-PACKAGE_VERSION = "1.0.0"
+PACKAGE_VERSION = "0.1.0"
 
 _REPO_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 

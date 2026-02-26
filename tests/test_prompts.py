@@ -7,7 +7,7 @@ that would cause a KeyError at runtime.
 
 import pytest
 
-from agentic_dev.prompts import (
+from buildteam.prompts import (
     BOOTSTRAP_PROMPT,
     BUILDER_FIX_ONLY_PROMPT,
     BUILDER_ISSUE_FIXING_SECTION,

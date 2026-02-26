@@ -9,7 +9,7 @@ covers all reachable feature tags.
 import re
 from dataclasses import dataclass, field
 
-from agentic_dev.milestone import parse_backlog
+from buildteam.milestone import parse_backlog
 
 
 # ============================================

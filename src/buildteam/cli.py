@@ -6,9 +6,9 @@ from typing import Annotated
 
 import typer
 
-from agentic_dev.milestone import get_all_milestones
-from agentic_dev.utils import console, run_cmd
-from agentic_dev.version import get_version
+from buildteam.milestone import get_all_milestones
+from buildteam.utils import console, run_cmd
+from buildteam.version import get_version
 
 
 def _print_dir_status(directory: str, open_prefix: str, closed_prefix: str) -> None:
@@ -54,14 +54,14 @@ def main(
     """Multi-agent autonomous development orchestrator."""
 
 # Register commands from submodules
-from agentic_dev import bootstrap as _bootstrap_mod
-from agentic_dev import builder as _builder_mod
-from agentic_dev import orchestrator as _orchestrator_mod
-from agentic_dev import planner as _planner_mod
-from agentic_dev import watcher as _watcher_mod
-from agentic_dev import milestone_reviewer as _milestone_reviewer_mod
-from agentic_dev import tester as _tester_mod
-from agentic_dev import validator as _validator_mod
+from buildteam import bootstrap as _bootstrap_mod
+from buildteam import builder as _builder_mod
+from buildteam import orchestrator as _orchestrator_mod
+from buildteam import planner as _planner_mod
+from buildteam import watcher as _watcher_mod
+from buildteam import milestone_reviewer as _milestone_reviewer_mod
+from buildteam import tester as _tester_mod
+from buildteam import validator as _validator_mod
 
 _bootstrap_mod.register(app)
 _builder_mod.register(app)

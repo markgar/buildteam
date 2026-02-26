@@ -1,5 +1,5 @@
-"""Allow running as `python -m agentic_dev`."""
+"""Allow running as `python -m buildteam`."""
 
-from agentic_dev.cli import app
+from buildteam.cli import app
 
 app()

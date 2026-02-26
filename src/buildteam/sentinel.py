@@ -5,7 +5,7 @@ import os
 import re
 from datetime import datetime
 
-from agentic_dev.utils import resolve_logs_dir
+from buildteam.utils import resolve_logs_dir
 
 _STALE_LOG_TIMEOUT_MINUTES = 30
 _BUILDER_ID_RE = re.compile(r"^builder-(\d+)\.(done|log)$")

@@ -1,6 +1,6 @@
 """Tests for backlog_checker: deterministic checks against real and synthetic backlogs."""
 
-from agentic_dev.backlog_checker import (
+from buildteam.backlog_checker import (
     check_backlog_heading,
     check_dependency_graph,
     check_first_milestone,
@@ -9,7 +9,7 @@ from agentic_dev.backlog_checker import (
     check_story_ordering,
     run_deterministic_checks,
 )
-from agentic_dev.milestone import parse_backlog
+from buildteam.milestone import parse_backlog
 
 
 # ============================================

@@ -4,21 +4,21 @@ Each constant is a format string. Use .format() to interpolate variables
 before passing to run_copilot().
 
 Prompts are organized by agent — one module per agent. This __init__
-re-exports every constant so existing ``from agentic_dev.prompts import X``
+re-exports every constant so existing ``from buildteam.prompts import X``
 imports continue to work unchanged.
 """
 
-from agentic_dev.prompts.bootstrap import BOOTSTRAP_PROMPT
-from agentic_dev.prompts.builder import (
+from buildteam.prompts.bootstrap import BOOTSTRAP_PROMPT
+from buildteam.prompts.builder import (
     BUILDER_FIX_ONLY_PROMPT,
     BUILDER_ISSUE_FIXING_SECTION,
     BUILDER_PROMPT,
 )
-from agentic_dev.prompts.copilot_instructions import (
+from buildteam.prompts.copilot_instructions import (
     COPILOT_INSTRUCTIONS_PROMPT,
     COPILOT_INSTRUCTIONS_TEMPLATE,
 )
-from agentic_dev.prompts.planner import (
+from buildteam.prompts.planner import (
     BACKLOG_ORDERING_PROMPT,
     BACKLOG_QUALITY_PROMPT,
     PLANNER_COMPLETENESS_PROMPT,
@@ -27,13 +27,13 @@ from agentic_dev.prompts.planner import (
     PLANNER_PROMPT,
     PLANNER_SPLIT_PROMPT,
 )
-from agentic_dev.prompts.reviewer import (
+from buildteam.prompts.reviewer import (
     REVIEWER_BRANCH_BATCH_PROMPT,
     REVIEWER_BRANCH_COMMIT_PROMPT,
     REVIEWER_MILESTONE_PROMPT,
 )
-from agentic_dev.prompts.tester import TESTER_MILESTONE_PROMPT
-from agentic_dev.prompts.validator import (
+from buildteam.prompts.tester import TESTER_MILESTONE_PROMPT
+from buildteam.prompts.validator import (
     VALIDATOR_JOURNEY_RESULTS_TAGS,
     VALIDATOR_JOURNEY_SECTION,
     VALIDATOR_LEGACY_RESULTS_TAGS,

@@ -12,7 +12,7 @@ Handles all setup automatically:
   2. Installs the package in editable mode (pip install -e .)
   3. Runs existing tests to catch problems early
   4. Creates a timestamped run directory under tests/harness/runs/
-  5. Launches agentic-dev go
+  5. Launches buildteam go
   6. Prints log locations for post-mortem analysis
 
 Resume mode (--resume):
@@ -54,15 +54,15 @@ def ensure_python() -> str:
     return sys.executable
 
 
-def ensure_agentic_dev(project_root: Path) -> str | None:
-    """Find the agentic-dev CLI executable."""
+def ensure_buildteam(project_root: Path) -> str | None:
+    """Find the buildteam CLI executable."""
     for agent_path in (
-        project_root / ".venv" / "Scripts" / "agentic-dev.exe",  # Windows
-        project_root / ".venv" / "bin" / "agentic-dev",          # Unix
+        project_root / ".venv" / "Scripts" / "buildteam.exe",  # Windows
+        project_root / ".venv" / "bin" / "buildteam",          # Unix
     ):
         if agent_path.exists():
             return str(agent_path)
-    return shutil.which("agentic-dev")
+    return shutil.which("buildteam")
 
 
 # ---------------------------------------------------------------------------
@@ -86,11 +86,11 @@ def run_preflight(project_root: Path, python_exe: str) -> bool:
         print("ERROR: pip install failed.")
         return False
 
-    if not ensure_agentic_dev(project_root):
-        print("ERROR: agentic-dev not found on PATH after install.")
+    if not ensure_buildteam(project_root):
+        print("ERROR: buildteam not found on PATH after install.")
         print(f"Try: {python_exe} -m pip install -e {project_root}")
         return False
-    print("  ✓ agentic-dev is available")
+    print("  ✓ buildteam is available")
 
     print("  Running unit tests...")
     rc = run_command([python_exe, "-m", "pytest", str(project_root / "tests"), "-q"])
@@ -188,7 +188,7 @@ def clean_agent_dirs(project_dir: Path) -> None:
 # ---------------------------------------------------------------------------
 
 def build_go_command(
-    agentic_dev: str,
+    buildteam: str,
     project_dir: Path,
     model: str,
     builders: int,
@@ -201,8 +201,8 @@ def build_go_command(
     validator_model: str | None = None,
     planner_model: str | None = None,
 ) -> list[str]:
-    """Assemble the agentic-dev go command with all flags."""
-    command = [agentic_dev, "go", "--directory", str(project_dir), "--model", model, "--builders", str(builders)]
+    """Assemble the buildteam go command with all flags."""
+    command = [buildteam, "go", "--directory", str(project_dir), "--model", model, "--builders", str(builders)]
     if spec_file:
         command.extend(["--spec-file", str(spec_file)])
     if org:
@@ -257,9 +257,9 @@ def run_harness() -> int:
     if not run_preflight(project_root, python_exe):
         return 1
 
-    agentic_dev = ensure_agentic_dev(project_root)
-    if not agentic_dev:
-        print("ERROR: agentic-dev not found.")
+    buildteam = ensure_buildteam(project_root)
+    if not buildteam:
+        print("ERROR: buildteam not found.")
         return 1
 
     # Agent model kwargs (shared between fresh and resume)
@@ -299,7 +299,7 @@ def run_harness() -> int:
         print("")
 
         command = build_go_command(
-            agentic_dev, project_dir, args.model, args.builders,
+            buildteam, project_dir, args.model, args.builders,
             spec_file=spec_file, org=args.org, **model_kwargs,
         )
         exit_code = run_command(command)
@@ -327,7 +327,7 @@ def run_harness() -> int:
         run_dir.mkdir(parents=True, exist_ok=True)
 
         command = build_go_command(
-            agentic_dev, project_dir, args.model, args.builders,
+            buildteam, project_dir, args.model, args.builders,
             spec_file=spec_file, org=args.org, **model_kwargs,
         )
         exit_code = run_command(command)

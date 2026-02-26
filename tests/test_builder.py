@@ -1,6 +1,6 @@
 """Tests for builder claim loop, text manipulation, and decision logic."""
 
-from agentic_dev.builder import (
+from buildteam.builder import (
     BuildState,
     _MAX_FIX_ONLY_CYCLES,
     _build_partition_filter,
@@ -11,7 +11,7 @@ from agentic_dev.builder import (
     mark_story_unclaimed_text,
     find_milestone_file_for_story,
 )
-from agentic_dev.sentinel import check_agent_idle
+from buildteam.sentinel import check_agent_idle
 
 
 # ============================================

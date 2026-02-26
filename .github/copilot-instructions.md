@@ -14,7 +14,7 @@ Key distinctions:
 - **`SPEC.md`, `BACKLOG.md`, `milestones/`, `DEPLOY.md`, `REVIEW-THEMES.md`** — planning and coordination artifacts that exist *inside target project repos*. This project does not have these files itself.
 - **GitHub Issues** (labels `bug`, `finding`, `note`) — bugs and review findings are tracked as GitHub Issues, not files. These labels are used in target project repos, not this project.
 - **`builder-N/`, `reviewer-N/`, `milestone-reviewer/`, `tester/`, `validator/`** — separate git clone directories of the *target project*, one per agent. These are working copies created at runtime, not subdirectories of this project.
-- **Prompt templates in `src/agentic_dev/prompts/`** — instructions sent to Copilot CLI agents operating *on the target project*. They reference target-project files and conventions, not this project's internals.
+- **Prompt templates in `src/buildteam/prompts/`** — instructions sent to Copilot CLI agents operating *on the target project*. They reference target-project files and conventions, not this project's internals.
 
 When editing this codebase, keep this two-level structure in mind: the Python code here is orchestration logic; the prompts and templates describe work that happens in a *different* repo.
 
@@ -34,38 +34,38 @@ When editing this codebase, keep this two-level structure in mind: the Python co
 
 ## Project structure
 
-- **Source code lives in `src/agentic_dev/`** — this is the only directory to edit.
+- **Source code lives in `src/buildteam/`** — this is the only directory to edit.
 - **`tests/`** contains unit tests and the end-to-end test harness (`tests/harness/`).
 - **`docs/`** contains rubrics for evaluating planner output quality (`backlog-planner-rubric.md`, `planner-quality-rubric.md`). These are specifications used by the automated backlog checker.
 - **`build/`** is a stale setuptools artifact. Delete it if present; use `pip install -e .` for development.
-- **`pyproject.toml`** defines the package. The project uses a `src/` layout with the package name `agentic_dev`.
+- **`pyproject.toml`** defines the package. The project uses a `src/` layout with the package name `buildteam`.
 
 ## Key files
 
-- `src/agentic_dev/cli.py` — App definition and command registration: `status`, `--version`.
-- `src/agentic_dev/orchestrator.py` — The `go` command: project detection, agent launching, copilot-instructions generation.
-- `src/agentic_dev/bootstrap.py` — Project scaffolding: repo creation, cloning reviewer/milestone-reviewer/tester/validator copies.
-- `src/agentic_dev/planner.py` — Backlog planner and milestone planner: `plan` command, `check_milestone_sizes()` helper.
-- `src/agentic_dev/builder.py` — Build loop: milestone completion, retry logic.
-- `src/agentic_dev/watcher.py` — Commit watcher: branch-attached per-builder reviews and legacy main-polling mode.
-- `src/agentic_dev/milestone_reviewer.py` — Milestone reviewer: cross-cutting milestone reviews with code analysis and note frequency filtering.
-- `src/agentic_dev/tester.py` — Test loop: milestone-triggered testing.
-- `src/agentic_dev/validator.py` — Validator loop: milestone-triggered container build and acceptance testing.
-- `src/agentic_dev/terminal.py` — Terminal spawning helper for launching agents in new windows.
-- `src/agentic_dev/prompts/` — All LLM prompt templates (one file per agent). Constants only, no logic.
-- `src/agentic_dev/utils.py` — Core helpers: logging, command execution, platform detection.
-- `src/agentic_dev/git_helpers.py` — Git operations: push with retry, commit classification, branch detection.
-- `src/agentic_dev/sentinel.py` — Builder-done sentinel, agent-idle detection, and per-builder reviewer checkpoints.
-- `src/agentic_dev/milestone.py` — Milestone parsing, boundary tracking, and per-agent milestone checkpoints.
-- `src/agentic_dev/config.py` — Language/stack configurations and thresholds for tree-sitter code analysis.
-- `src/agentic_dev/backlog_checker.py` — Backlog quality gate: deterministic structural checks (A1-A4) and LLM quality review (C1-C7) on BACKLOG.md and milestone files. Also runs story ordering checks for parallel builder throughput.
-- `src/agentic_dev/code_analysis.py` — Tree-sitter code analysis for target projects: structural checks across Python, JS/TS, and C#. Invoked by the milestone reviewer during milestone reviews.
-- `src/agentic_dev/journeys.py` — Journey parsing, eligibility filtering, and greedy set-cover selection for JOURNEYS.md-based validation.
-- `src/agentic_dev/version.py` — Package version and git-based build info for the `--version` flag.
+- `src/buildteam/cli.py` — App definition and command registration: `status`, `--version`.
+- `src/buildteam/orchestrator.py` — The `go` command: project detection, agent launching, copilot-instructions generation.
+- `src/buildteam/bootstrap.py` — Project scaffolding: repo creation, cloning reviewer/milestone-reviewer/tester/validator copies.
+- `src/buildteam/planner.py` — Backlog planner and milestone planner: `plan` command, `check_milestone_sizes()` helper.
+- `src/buildteam/builder.py` — Build loop: milestone completion, retry logic.
+- `src/buildteam/watcher.py` — Commit watcher: branch-attached per-builder reviews and legacy main-polling mode.
+- `src/buildteam/milestone_reviewer.py` — Milestone reviewer: cross-cutting milestone reviews with code analysis and note frequency filtering.
+- `src/buildteam/tester.py` — Test loop: milestone-triggered testing.
+- `src/buildteam/validator.py` — Validator loop: milestone-triggered container build and acceptance testing.
+- `src/buildteam/terminal.py` — Terminal spawning helper for launching agents in new windows.
+- `src/buildteam/prompts/` — All LLM prompt templates (one file per agent). Constants only, no logic.
+- `src/buildteam/utils.py` — Core helpers: logging, command execution, platform detection.
+- `src/buildteam/git_helpers.py` — Git operations: push with retry, commit classification, branch detection.
+- `src/buildteam/sentinel.py` — Builder-done sentinel, agent-idle detection, and per-builder reviewer checkpoints.
+- `src/buildteam/milestone.py` — Milestone parsing, boundary tracking, and per-agent milestone checkpoints.
+- `src/buildteam/config.py` — Language/stack configurations and thresholds for tree-sitter code analysis.
+- `src/buildteam/backlog_checker.py` — Backlog quality gate: deterministic structural checks (A1-A4) and LLM quality review (C1-C7) on BACKLOG.md and milestone files. Also runs story ordering checks for parallel builder throughput.
+- `src/buildteam/code_analysis.py` — Tree-sitter code analysis for target projects: structural checks across Python, JS/TS, and C#. Invoked by the milestone reviewer during milestone reviews.
+- `src/buildteam/journeys.py` — Journey parsing, eligibility filtering, and greedy set-cover selection for JOURNEYS.md-based validation.
+- `src/buildteam/version.py` — Package version and git-based build info for the `--version` flag.
 
 ## Architecture
 
-CLI application built with typer. Each command (`go`, `plan`, `build`, `commitwatch`, `milestonewatch`, `testloop`, `validateloop`) maps to a module in `src/agentic_dev/`. The `go` command (`orchestrator.py`) is the primary entry point — it calls the others.
+CLI application built with typer. Each command (`go`, `plan`, `build`, `commitwatch`, `milestonewatch`, `testloop`, `validateloop`) maps to a module in `src/buildteam/`. The `go` command (`orchestrator.py`) is the primary entry point — it calls the others.
 
 Core pattern: Python code handles deterministic orchestration (milestone tracking, git operations, agent lifecycle, shutdown coordination), while Copilot CLI (`copilot --yolo`) handles creative work (writing code, reviewing diffs, planning tasks). Each `run_copilot()` call sends a prompt string and waits for completion.
 
@@ -73,7 +73,7 @@ Prompts are plain format strings in `prompts/`. Pure decision logic (parsing, va
 
 ## Testing conventions
 
-- **Tests live in `tests/`** mirroring `src/agentic_dev/` — e.g. `tests/test_milestone.py` tests `agentic_dev.milestone`.
+- **Tests live in `tests/`** mirroring `src/buildteam/` — e.g. `tests/test_milestone.py` tests `buildteam.milestone`.
 - **Use pytest.** No unittest classes. Plain functions with descriptive names.
 - **Test the contract, not the implementation.** A test should describe expected behavior in terms a user would understand — not mirror the code's internal branching. If the test would break when you refactor internals without changing behavior, it's too tightly coupled.
 - **Name tests as behavioral expectations.** `test_stuck_milestone_stops_after_three_retries` not `test_update_milestone_retry_state_returns_true`. The test name should read like a requirement.

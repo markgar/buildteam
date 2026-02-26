@@ -4,16 +4,16 @@ import os
 
 import typer
 
-from agentic_dev.backlog_checker import check_backlog_quality, run_ordering_check
-from agentic_dev.milestone import get_tasks_per_milestone_from_dir
-from agentic_dev.prompts import (
+from buildteam.backlog_checker import check_backlog_quality, run_ordering_check
+from buildteam.milestone import get_tasks_per_milestone_from_dir
+from buildteam.prompts import (
     PLANNER_COMPLETENESS_PROMPT,
     PLANNER_INITIAL_PROMPT,
     PLANNER_JOURNEYS_PROMPT,
     PLANNER_PROMPT,
     PLANNER_SPLIT_PROMPT,
 )
-from agentic_dev.utils import log, run_cmd, run_copilot
+from buildteam.utils import log, run_cmd, run_copilot
 
 
 _MAX_TASKS_PER_MILESTONE = 8

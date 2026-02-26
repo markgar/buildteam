@@ -1,6 +1,6 @@
 """Tests for milestone parsing, boundary tracking, and progress helpers."""
 
-from agentic_dev.milestone import (
+from buildteam.milestone import (
     count_unstarted_milestones,
     get_all_milestones,
     get_completed_milestones_from_dir,

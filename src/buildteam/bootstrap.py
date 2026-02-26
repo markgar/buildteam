@@ -5,8 +5,8 @@ from typing import Annotated
 
 import typer
 
-from agentic_dev.prompts import BOOTSTRAP_PROMPT
-from agentic_dev.utils import (
+from buildteam.prompts import BOOTSTRAP_PROMPT
+from buildteam.utils import (
     check_command,
     console,
     is_macos,
@@ -38,12 +38,12 @@ def bootstrap(
     console.print()
     console.print("Use 'go' instead, which does everything end-to-end:", style="green")
     console.print()
-    console.print("  agentic-dev go --directory <path> --spec-file <file>", style="bold cyan")
-    console.print("  agentic-dev go --directory <path> --description \"...\"", style="bold cyan")
+    console.print("  buildteam go --directory <path> --spec-file <file>", style="bold cyan")
+    console.print("  buildteam go --directory <path> --description \"...\"", style="bold cyan")
     console.print()
     console.print("To continue an existing project with new requirements:", style="green")
     console.print()
-    console.print("  agentic-dev go --directory <path> --spec-file <new-features.md>", style="bold cyan")
+    console.print("  buildteam go --directory <path> --spec-file <new-features.md>", style="bold cyan")
     console.print()
     raise typer.Exit(1)
 
@@ -119,7 +119,7 @@ def _check_prerequisites():
 
 _WORKSPACE_README = """# Multi-Agent Workspace
 
-This directory is managed by the **agentic-dev** multi-agent orchestrator.
+This directory is managed by the **buildteam** multi-agent orchestrator.
 It is not the project source code itself — it is the workspace that contains
 separate clones of the project repo, each used by a different agent.
 
@@ -254,7 +254,7 @@ def _scaffold_project(directory, name, description, gh_user, org=""):
 
     # Pre-initialize git in builder/ so copilot never accidentally commits
     # to a parent repo when the project dir is nested inside another git tree
-    # (e.g. test harness runs under multi-agent-dev).
+    # (e.g. test harness runs under buildteam).
     run_cmd(["git", "init"], cwd=builder_dir, quiet=True)
 
     prompt = BOOTSTRAP_PROMPT.format(description=description, gh_user=owner, name=name)
@@ -297,9 +297,9 @@ def run_bootstrap(
     abs_directory = os.path.normcase(os.path.abspath(directory))
     abs_cwd = os.path.normcase(os.path.abspath(os.getcwd()))
     directory_is_subdirectory = abs_directory.startswith(abs_cwd + os.sep)
-    if current_dir == "multi-agent-dev" and not directory_is_subdirectory:
+    if current_dir == "buildteam" and not directory_is_subdirectory:
         console.print()
-        console.print("WARNING: You are in the multi-agent-dev directory.", style="yellow")
+        console.print("WARNING: You are in the buildteam directory.", style="yellow")
         console.print("Project will be created at:", style="yellow")
         console.print(f"  {directory}/", style="cyan")
         console.print()

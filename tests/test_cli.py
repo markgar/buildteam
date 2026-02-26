@@ -2,7 +2,7 @@
 
 import os
 
-from agentic_dev.orchestrator import _resolve_directory
+from buildteam.orchestrator import _resolve_directory
 
 
 # --- _resolve_directory ---

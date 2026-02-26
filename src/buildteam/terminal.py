@@ -6,7 +6,7 @@ import subprocess
 import sys
 import tempfile
 
-from agentic_dev.utils import check_command, console, is_macos, is_windows
+from buildteam.utils import check_command, console, is_macos, is_windows
 
 
 def build_agent_script(working_dir: str, command: str, platform: str, model: str = "") -> str:
@@ -22,7 +22,7 @@ def build_agent_script(working_dir: str, command: str, platform: str, model: str
     if copilot_model:
         lines.append(f"export COPILOT_MODEL='{copilot_model}'")
     lines.append(f"cd '{working_dir}'")
-    lines.append(f"agentic-dev {command}")
+    lines.append(f"buildteam {command}")
     if platform == "linux":
         lines.append("exec bash")
     return "\n".join(lines) + "\n"
@@ -48,13 +48,13 @@ def _resolve_windows_command(command: str) -> list[str]:
     separate arguments in the subprocess call.
     """
     parts = command.split()
-    venv_exe = os.path.join(os.path.dirname(sys.executable), "agentic-dev.exe")
+    venv_exe = os.path.join(os.path.dirname(sys.executable), "buildteam.exe")
     if os.path.isfile(venv_exe):
         return [venv_exe] + parts
-    path_exe = shutil.which("agentic-dev")
+    path_exe = shutil.which("buildteam")
     if path_exe:
         return [path_exe] + parts
-    return [sys.executable, "-m", "agentic_dev"] + parts
+    return [sys.executable, "-m", "buildteam"] + parts
 
 
 def _spawn_windows(working_dir: str, command: str, model: str = "") -> None:
@@ -92,7 +92,7 @@ def _spawn_linux(working_dir: str, command: str, model: str = "") -> None:
         console.print(
             f"WARNING: Could not find a terminal emulator. "
             f"Please run manually in a new terminal:\n"
-            f"  cd {working_dir} && agentic-dev {command}",
+            f"  cd {working_dir} && buildteam {command}",
             style="yellow",
         )
 
@@ -114,6 +114,6 @@ def spawn_agent_in_terminal(working_dir: str, command: str, model: str = "") -> 
     except Exception as exc:
         console.print(
             f"WARNING: Failed to spawn terminal for '{command}': {exc}\n"
-            f"  Run manually: cd {working_dir} && agentic-dev {command}",
+            f"  Run manually: cd {working_dir} && buildteam {command}",
             style="yellow",
         )

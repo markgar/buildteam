@@ -8,9 +8,9 @@ LLM quality check (C1-C7, C5b) evaluates story semantics via a single Copilot ca
 import os
 import re
 
-from agentic_dev.milestone import list_milestone_files, parse_backlog, parse_milestones_from_text
-from agentic_dev.prompts import BACKLOG_ORDERING_PROMPT, BACKLOG_QUALITY_PROMPT
-from agentic_dev.utils import log, run_copilot
+from buildteam.milestone import list_milestone_files, parse_backlog, parse_milestones_from_text
+from buildteam.prompts import BACKLOG_ORDERING_PROMPT, BACKLOG_QUALITY_PROMPT
+from buildteam.utils import log, run_copilot
 
 
 # Keywords that indicate a test-only story (primary activity, not incidental)

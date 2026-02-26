@@ -16,21 +16,21 @@ same final app (Express API + React UI with create and delete).
 
 ### Direct CLI
 
-Run `agentic-dev go` yourself — you manage the project directory.
+Run `buildteam go` yourself — you manage the project directory.
 
 **Path A — incremental (two sessions):**
 ```bash
 # Session 1: build the base app
-agentic-dev go --directory notes-app --spec-file tests/harness/sample_specs_notes/sample_spec_notes_1_base.md
+buildteam go --directory notes-app --spec-file tests/harness/sample_specs_notes/sample_spec_notes_1_base.md
 # Session 2: resume and add the delete feature
-agentic-dev go --directory notes-app --spec-file tests/harness/sample_specs_notes/sample_spec_notes_2_add_delete.md
+buildteam go --directory notes-app --spec-file tests/harness/sample_specs_notes/sample_spec_notes_2_add_delete.md
 # Session 3: resume and add timestamps
-agentic-dev go --directory notes-app --spec-file tests/harness/sample_specs_notes/sample_spec_notes_3_add_timestamps.md
+buildteam go --directory notes-app --spec-file tests/harness/sample_specs_notes/sample_spec_notes_3_add_timestamps.md
 ```
 
 **Path B — combined (single session):**
 ```bash
-agentic-dev go --directory notes-app --spec-file tests/harness/sample_specs_notes/sample_spec_notes_full.md
+buildteam go --directory notes-app --spec-file tests/harness/sample_specs_notes/sample_spec_notes_full.md
 ```
 
 ---

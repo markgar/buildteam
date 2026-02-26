@@ -8,14 +8,14 @@ from typing import Annotated
 
 import typer
 
-from agentic_dev.git_helpers import (
+from buildteam.git_helpers import (
     create_milestone_branch,
     delete_milestone_branch,
     ensure_on_main,
     git_push_with_retry,
     merge_milestone_to_main,
 )
-from agentic_dev.milestone import (
+from buildteam.milestone import (
     get_all_milestones,
     get_last_milestone_end_sha,
     get_milestone_progress_from_file,
@@ -24,16 +24,16 @@ from agentic_dev.milestone import (
     parse_milestone_file,
     record_milestone_boundary,
 )
-from agentic_dev.prompts import (
+from buildteam.prompts import (
     BUILDER_FIX_ONLY_PROMPT,
     BUILDER_ISSUE_FIXING_SECTION,
     BUILDER_PROMPT,
 )
-from agentic_dev.sentinel import (
+from buildteam.sentinel import (
     are_agents_idle,
     write_builder_done,
 )
-from agentic_dev.utils import (
+from buildteam.utils import (
     count_open_bug_issues,
     count_open_finding_issues,
     ensure_milestone_label_exists,
@@ -518,9 +518,9 @@ def _run_issue_builder_loop(
     checks whether all milestone builders have finished. If so, writes its own
     sentinel and returns. Otherwise sleeps and polls again.
     """
-    from agentic_dev.milestone import get_merged_milestone_labels
-    from agentic_dev.sentinel import are_other_builders_done
-    from agentic_dev.utils import list_open_issues_for_milestones
+    from buildteam.milestone import get_merged_milestone_labels
+    from buildteam.sentinel import are_other_builders_done
+    from buildteam.utils import list_open_issues_for_milestones
 
     log(agent_name, "")
     log(agent_name, "[Issue Builder] Starting dedicated issue fixing loop.", style="green")
@@ -705,7 +705,7 @@ def build(
                     return
 
         # Plan: expand this story into a milestone file
-        from agentic_dev.planner import check_milestone_sizes, plan
+        from buildteam.planner import check_milestone_sizes, plan
 
         log(agent_name, "")
         log(agent_name, f"[Milestone Planner] Planning story: {story['name']}...", style="magenta")

@@ -96,7 +96,7 @@ style: |
 | | |
 |---|---|
 | **Mission** | Single entry point (`go`) — detects project state, bootstraps or resumes, launches all agents, waits for completion |
-| **Triggered by** | User runs `agentic-dev go --spec-file spec.md` |
+| **Triggered by** | User runs `buildteam go --spec-file spec.md` |
 | **Runs from** | Parent directory (creates/manages all agent clone directories) |
 | **Reads** | CLI flags, repo state (GitHub via `gh repo view`) |
 | **Writes** | Agent clone directories, `logs/` directory, stale sentinel cleanup |
@@ -205,4 +205,4 @@ style: |
 
 <br>
 
-github.com/markgar/multi-agent-dev
+github.com/markgar/buildteam

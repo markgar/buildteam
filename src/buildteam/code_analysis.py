@@ -16,7 +16,7 @@ from dataclasses import dataclass
 
 from tree_sitter import Language, Parser
 
-from agentic_dev.config import ANALYSIS_THRESHOLDS, LANGUAGE_CONFIGS
+from buildteam.config import ANALYSIS_THRESHOLDS, LANGUAGE_CONFIGS
 
 
 @dataclass

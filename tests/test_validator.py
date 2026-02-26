@@ -2,15 +2,15 @@
 
 import os
 
-from agentic_dev.validator import (
+from buildteam.validator import (
     find_unvalidated_milestones,
     detect_has_frontend,
     compute_project_ports,
     _print_validation_summary,
     _copy_playwright_traces,
 )
-from agentic_dev.sentinel import check_agent_idle
-from agentic_dev.utils import find_project_root
+from buildteam.sentinel import check_agent_idle
+from buildteam.utils import find_project_root
 
 
 # --- port isolation ---
@@ -175,7 +175,7 @@ def test_print_validation_summary_counts_categories(tmp_path, monkeypatch):
         "FAIL [UI] Navigation menu broken\n"
         "PASS Misc check\n"
     )
-    monkeypatch.setattr("agentic_dev.validator.resolve_logs_dir", lambda: str(logs_dir))
+    monkeypatch.setattr("buildteam.validator.resolve_logs_dir", lambda: str(logs_dir))
     # Should not raise
     _print_validation_summary("Auth API")
 
@@ -184,7 +184,7 @@ def test_print_validation_summary_handles_missing_file(tmp_path, monkeypatch):
     """_print_validation_summary handles a missing results file gracefully."""
     logs_dir = tmp_path / "logs"
     logs_dir.mkdir()
-    monkeypatch.setattr("agentic_dev.validator.resolve_logs_dir", lambda: str(logs_dir))
+    monkeypatch.setattr("buildteam.validator.resolve_logs_dir", lambda: str(logs_dir))
     # Should not raise
     _print_validation_summary("nonexistent-milestone")
 
@@ -195,7 +195,7 @@ def test_print_validation_summary_handles_empty_file(tmp_path, monkeypatch):
     logs_dir.mkdir()
     results = logs_dir / "validation-empty.txt"
     results.write_text("")
-    monkeypatch.setattr("agentic_dev.validator.resolve_logs_dir", lambda: str(logs_dir))
+    monkeypatch.setattr("buildteam.validator.resolve_logs_dir", lambda: str(logs_dir))
     _print_validation_summary("empty")
 
 
@@ -205,7 +205,7 @@ def test_copy_playwright_traces_copies_existing_dirs(tmp_path, monkeypatch):
     """_copy_playwright_traces copies report and traces when dirs exist."""
     logs_dir = tmp_path / "logs"
     logs_dir.mkdir()
-    monkeypatch.setattr("agentic_dev.validator.resolve_logs_dir", lambda: str(logs_dir))
+    monkeypatch.setattr("buildteam.validator.resolve_logs_dir", lambda: str(logs_dir))
     monkeypatch.chdir(tmp_path)
 
     report_dir = tmp_path / "e2e" / "playwright-report"
@@ -227,7 +227,7 @@ def test_copy_playwright_traces_handles_missing_dirs(tmp_path, monkeypatch):
     """_copy_playwright_traces does nothing when source dirs don't exist."""
     logs_dir = tmp_path / "logs"
     logs_dir.mkdir()
-    monkeypatch.setattr("agentic_dev.validator.resolve_logs_dir", lambda: str(logs_dir))
+    monkeypatch.setattr("buildteam.validator.resolve_logs_dir", lambda: str(logs_dir))
     monkeypatch.chdir(tmp_path)
     # Should not raise
     _copy_playwright_traces("no-frontend")

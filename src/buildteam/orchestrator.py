@@ -9,15 +9,15 @@ from typing import Annotated
 
 import typer
 
-from agentic_dev.bootstrap import run_bootstrap, write_workspace_readme
-from agentic_dev.planner import check_milestone_sizes, plan
-from agentic_dev.prompts import (
+from buildteam.bootstrap import run_bootstrap, write_workspace_readme
+from buildteam.planner import check_milestone_sizes, plan
+from buildteam.prompts import (
     COPILOT_INSTRUCTIONS_PROMPT,
     COPILOT_INSTRUCTIONS_TEMPLATE,
 )
-from agentic_dev.sentinel import clear_builder_done, is_builder_done
-from agentic_dev.terminal import spawn_agent_in_terminal
-from agentic_dev.utils import console, ensure_bug_label_exists, ensure_review_labels_exist, log, pushd, run_cmd, run_copilot, validate_model
+from buildteam.sentinel import clear_builder_done, is_builder_done
+from buildteam.terminal import spawn_agent_in_terminal
+from buildteam.utils import console, ensure_bug_label_exists, ensure_review_labels_exist, log, pushd, run_cmd, run_copilot, validate_model
 
 
 # Per-agent model map. Keys are agent roles, values are Copilot CLI model names.

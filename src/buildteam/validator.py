@@ -10,17 +10,17 @@ from typing import Annotated
 
 import typer
 
-from agentic_dev.git_helpers import git_push_with_retry
-from agentic_dev.journeys import (
+from buildteam.git_helpers import git_push_with_retry
+from buildteam.journeys import (
     format_journey_prompt_block,
     select_journeys_for_milestone,
 )
-from agentic_dev.milestone import (
+from buildteam.milestone import (
     load_milestone_boundaries,
     load_reviewed_milestones,
     save_milestone_checkpoint,
 )
-from agentic_dev.prompts import (
+from buildteam.prompts import (
     VALIDATOR_JOURNEY_RESULTS_TAGS,
     VALIDATOR_JOURNEY_SECTION,
     VALIDATOR_LEGACY_RESULTS_TAGS,
@@ -29,8 +29,8 @@ from agentic_dev.prompts import (
     VALIDATOR_PLAYWRIGHT_SECTION,
     VALIDATOR_PLAYWRIGHT_TRACE_SECTION,
 )
-from agentic_dev.sentinel import is_builder_done
-from agentic_dev.utils import log, run_cmd, run_copilot, resolve_logs_dir
+from buildteam.sentinel import is_builder_done
+from buildteam.utils import log, run_cmd, run_copilot, resolve_logs_dir
 
 
 _VALIDATOR_MILESTONE_CHECKPOINT = "validator.milestone"

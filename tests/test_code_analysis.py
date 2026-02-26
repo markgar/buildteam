@@ -5,7 +5,7 @@ import importlib
 import pytest
 from tree_sitter import Language, Parser
 
-from agentic_dev.code_analysis import (
+from buildteam.code_analysis import (
     Finding,
     analyze_source,
     classify_severity,
@@ -18,7 +18,7 @@ from agentic_dev.code_analysis import (
     measure_function_size,
     measure_nesting_depth,
 )
-from agentic_dev.config import (
+from buildteam.config import (
     CSHARP_CONFIG,
     JAVASCRIPT_CONFIG,
     LANGUAGE_CONFIGS,

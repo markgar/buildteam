@@ -7,8 +7,8 @@ import time
 
 import pytest
 
-from agentic_dev.sentinel import check_all_builders_done_status
-from agentic_dev.utils import (
+from buildteam.sentinel import check_all_builders_done_status
+from buildteam.utils import (
     count_unchecked_items,
     find_project_root,
     validate_model,
@@ -18,12 +18,12 @@ from agentic_dev.utils import (
     _stream_with_idle_timeout,
     _TIMEOUT_EXIT_CODE,
 )
-from agentic_dev.git_helpers import is_reviewer_only_files, is_coordination_only_files
-from agentic_dev.terminal import build_agent_script
-from agentic_dev.utils import count_open_items_in_dir, count_partitioned_open_items, _extract_item_ids
-from agentic_dev.utils import _parse_gh_issue_numbers
-from agentic_dev.milestone_reviewer import find_unreviewed_milestones
-from agentic_dev.tester import find_untested_milestones
+from buildteam.git_helpers import is_reviewer_only_files, is_coordination_only_files
+from buildteam.terminal import build_agent_script
+from buildteam.utils import count_open_items_in_dir, count_partitioned_open_items, _extract_item_ids
+from buildteam.utils import _parse_gh_issue_numbers
+from buildteam.milestone_reviewer import find_unreviewed_milestones
+from buildteam.tester import find_untested_milestones
 
 
 # --- unchecked items ---
@@ -117,20 +117,20 @@ def test_empty_list_is_not_coordination_only():
 def test_macos_script_has_cd_and_command():
     script = build_agent_script("/path/to/reviewer", "commitwatch", "macos")
     assert "cd '/path/to/reviewer'" in script
-    assert "agentic-dev commitwatch" in script
+    assert "buildteam commitwatch" in script
     assert "exec bash" not in script
 
 
 def test_linux_script_includes_exec_bash():
     script = build_agent_script("/path/to/tester", "testloop", "linux")
     assert "cd '/path/to/tester'" in script
-    assert "agentic-dev testloop" in script
+    assert "buildteam testloop" in script
     assert "exec bash" in script
 
 
 def test_windows_script_still_generates_valid_content():
     script = build_agent_script("C:\\Users\\dev\\reviewer", "commitwatch", "windows")
-    assert "agentic-dev commitwatch" in script
+    assert "buildteam commitwatch" in script
 
 
 def test_agent_script_propagates_copilot_model(monkeypatch):
@@ -238,7 +238,7 @@ def test_allowed_models_accepts_both_formats():
 
 # --- resolve_agent_models ---
 
-from agentic_dev.orchestrator import resolve_agent_models
+from buildteam.orchestrator import resolve_agent_models
 
 
 def test_resolve_agent_models_all_default():

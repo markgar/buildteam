@@ -12,12 +12,12 @@ import types
 
 import pytest
 
-from agentic_dev.builder import _cleanup_orphaned_milestones
-from agentic_dev.git_helpers import (
+from buildteam.builder import _cleanup_orphaned_milestones
+from buildteam.git_helpers import (
     MERGE_CONFLICT_RESOLUTION_PROMPT,
     _resolve_merge_conflicts_with_copilot,
 )
-from agentic_dev.prompts import BUILDER_PROMPT, BUILDER_ISSUE_FIXING_SECTION
+from buildteam.prompts import BUILDER_PROMPT, BUILDER_ISSUE_FIXING_SECTION
 
 
 # ============================================
@@ -81,7 +81,7 @@ def test_cleanup_removes_incomplete_milestones(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
 
     # Stub out git commands (we only care about filesystem effects)
-    import agentic_dev.builder as builder_mod
+    import buildteam.builder as builder_mod
     monkeypatch.setattr(builder_mod, "run_cmd", lambda *a, **kw: None)
     monkeypatch.setattr(builder_mod, "git_push_with_retry", lambda *a, **kw: True)
 
@@ -102,7 +102,7 @@ def test_cleanup_does_nothing_when_no_orphans(tmp_path, monkeypatch):
 
     monkeypatch.chdir(tmp_path)
 
-    import agentic_dev.builder as builder_mod
+    import buildteam.builder as builder_mod
     call_count = {"git": 0}
     original_run_cmd = builder_mod.run_cmd
     def counting_run_cmd(*a, **kw):
@@ -121,7 +121,7 @@ def test_cleanup_handles_missing_milestones_dir(tmp_path, monkeypatch):
     """When milestones/ doesn't exist, cleanup does nothing without crashing."""
     monkeypatch.chdir(tmp_path)
 
-    import agentic_dev.builder as builder_mod
+    import buildteam.builder as builder_mod
     monkeypatch.setattr(builder_mod, "run_cmd", lambda *a, **kw: None)
     monkeypatch.setattr(builder_mod, "git_push_with_retry", lambda *a, **kw: True)
 
@@ -145,7 +145,7 @@ def test_cleanup_removes_multiple_orphaned_parts(tmp_path, monkeypatch):
 
     monkeypatch.chdir(tmp_path)
 
-    import agentic_dev.builder as builder_mod
+    import buildteam.builder as builder_mod
     monkeypatch.setattr(builder_mod, "run_cmd", lambda *a, **kw: None)
     monkeypatch.setattr(builder_mod, "git_push_with_retry", lambda *a, **kw: True)
 
@@ -183,7 +183,7 @@ def test_conflict_resolution_prompt_does_not_commit():
 
 def test_resolve_returns_false_when_no_conflicted_files(monkeypatch):
     """When git reports no unmerged files, resolution should return False."""
-    import agentic_dev.git_helpers as gh
+    import buildteam.git_helpers as gh
 
     def fake_run_cmd(cmd, capture=False, quiet=False, cwd=None):
         result = types.SimpleNamespace()
@@ -199,7 +199,7 @@ def test_resolve_returns_false_when_no_conflicted_files(monkeypatch):
 
 def test_resolve_returns_false_when_copilot_fails(monkeypatch):
     """When Copilot exits non-zero, resolution should return False."""
-    import agentic_dev.git_helpers as gh
+    import buildteam.git_helpers as gh
 
     call_log = []
 
@@ -226,7 +226,7 @@ def test_resolve_returns_false_when_copilot_fails(monkeypatch):
 
 def test_resolve_returns_false_when_markers_remain(monkeypatch):
     """When conflict markers remain after Copilot runs, returns False."""
-    import agentic_dev.git_helpers as gh
+    import buildteam.git_helpers as gh
 
     def fake_run_cmd(cmd, capture=False, quiet=False, cwd=None):
         result = types.SimpleNamespace()
@@ -259,7 +259,7 @@ def test_resolve_returns_false_when_markers_remain(monkeypatch):
 
 def test_resolve_returns_true_when_all_conflicts_resolved(monkeypatch):
     """When Copilot resolves all conflicts and no markers remain, returns True."""
-    import agentic_dev.git_helpers as gh
+    import buildteam.git_helpers as gh
 
     diff_call_count = {"n": 0}
 

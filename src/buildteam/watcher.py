@@ -7,7 +7,7 @@ from typing import Annotated
 
 import typer
 
-from agentic_dev.git_helpers import (
+from buildteam.git_helpers import (
     detect_builder_branch,
     get_branch_head_sha,
     git_push_with_retry,
@@ -15,16 +15,16 @@ from agentic_dev.git_helpers import (
     is_merge_commit,
     is_reviewer_only_commit,
 )
-from agentic_dev.prompts import (
+from buildteam.prompts import (
     REVIEWER_BRANCH_BATCH_PROMPT,
     REVIEWER_BRANCH_COMMIT_PROMPT,
 )
-from agentic_dev.sentinel import (
+from buildteam.sentinel import (
     is_builder_done,
     load_reviewer_checkpoint,
     save_reviewer_checkpoint,
 )
-from agentic_dev.utils import log, resolve_logs_dir, run_cmd, run_copilot
+from buildteam.utils import log, resolve_logs_dir, run_cmd, run_copilot
 
 
 def register(app: typer.Typer) -> None:

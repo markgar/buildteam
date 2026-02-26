@@ -42,12 +42,12 @@ gh auth login
 ## Quick Start
 
 ```bash
-git clone https://github.com/markgar/multi-agent-dev
-cd multi-agent-dev
+git clone https://github.com/markgar/buildteam
+cd buildteam
 pip install -e .
 cd ..
 
-agentic-dev go --directory hello-world --model gpt-5.3-codex \
+buildteam go --directory hello-world --model gpt-5.3-codex \
   --description "a C# console app that prints Hello World"
 ```
 
@@ -60,14 +60,14 @@ That's it. `go` will:
 6. **Launch validator** — in a new terminal window, building containers and validating against the spec
 7. **Start building** — in your current terminal, completing milestones one at a time
 
-Multiple windows will be running. Watch the Builder work through milestones while the Reviewer, Tester, and Validator react to each commit and milestone completion. Run `agentic-dev status` anytime in a builder directory to check progress.
+Multiple windows will be running. Watch the Builder work through milestones while the Reviewer, Tester, and Validator react to each commit and milestone completion. Run `buildteam status` anytime in a builder directory to check progress.
 
 ### Continuing with New Requirements
 
 Come back later and add new features to the same project:
 
 ```bash
-agentic-dev go --directory hello-world --model gpt-5.3-codex --spec-file new-features.md
+buildteam go --directory hello-world --model gpt-5.3-codex --spec-file new-features.md
 ```
 
 The planner detects what's already built, updates the spec, and creates new milestones for the unimplemented work.
@@ -75,7 +75,7 @@ The planner detects what's already built, updates the spec, and creates new mile
 ### Resuming Where You Left Off
 
 ```bash
-agentic-dev go --directory hello-world --model gpt-5.3-codex
+buildteam go --directory hello-world --model gpt-5.3-codex
 ```
 
 No spec needed — just re-evaluates the plan and continues building.
@@ -85,7 +85,7 @@ No spec needed — just re-evaluates the plan and continues building.
 Point `--directory` at any existing project directory, even from a test harness run:
 
 ```bash
-agentic-dev go --directory /path/to/runs/20260213/my-app --model gpt-5.3-codex
+buildteam go --directory /path/to/runs/20260213/my-app --model gpt-5.3-codex
 ```
 
 `go` detects the existing repo on GitHub via `gh repo view` and automatically clones any missing agent directories. You can resume on a fresh machine with nothing but the repo — no pre-existing `builder-1/`, `reviewer-1/`, `tester/`, or `validator/` directories needed.
@@ -95,7 +95,7 @@ agentic-dev go --directory /path/to/runs/20260213/my-app --model gpt-5.3-codex
 Create the repo under a GitHub organization instead of your personal account:
 
 ```bash
-agentic-dev go --directory my-project --model gpt-5.3-codex --org my-org --description "..."
+buildteam go --directory my-project --model gpt-5.3-codex --org my-org --description "..."
 ```
 
 ### Per-Agent Model Overrides
@@ -103,7 +103,7 @@ agentic-dev go --directory my-project --model gpt-5.3-codex --org my-org --descr
 Use different models for different agents:
 
 ```bash
-agentic-dev go --directory my-project --model claude-opus-4.6 \
+buildteam go --directory my-project --model claude-opus-4.6 \
   --builder-model gpt-5.3-codex \
   --planner-model claude-sonnet-4.6 \
   --description "..."

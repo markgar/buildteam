@@ -1,6 +1,6 @@
 """Tests for journey parsing, eligibility filtering, and greedy set-cover selection."""
 
-from agentic_dev.journeys import (
+from buildteam.journeys import (
     Journey,
     filter_eligible_journeys,
     format_journey_prompt_block,

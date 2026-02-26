@@ -51,7 +51,7 @@ The `--model` flag is validated against allowed models (`gpt-5.3-codex`, `claude
 
 **Per-agent model overrides:** Individual agents can use different models via `--builder-model`, `--reviewer-model`, `--milestone-reviewer-model`, `--tester-model`, `--validator-model`, `--planner-model`, and `--backlog-model`. These override the base `--model` for the specified agent only.
 
-**Implements:** `src/agentic_dev/orchestrator.py`  
+**Implements:** `src/buildteam/orchestrator.py`  
 **Delegates to:** `bootstrap.py`, `planner.py`, `sentinel.py`, `terminal.py`  
 **Writes code:** No
 

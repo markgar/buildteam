@@ -3,14 +3,14 @@
 ## One Command
 
 ```bash
-agentic-dev go --directory my-project --model gpt-5.3-codex \
+buildteam go --directory my-project --model gpt-5.3-codex \
   --description "description of what to build"
 ```
 
 Or use a requirements file:
 
 ```bash
-agentic-dev go --directory my-project --model gpt-5.3-codex --spec-file requirements.md
+buildteam go --directory my-project --model gpt-5.3-codex --spec-file requirements.md
 ```
 
 ## Continuing with New Requirements
@@ -18,7 +18,7 @@ agentic-dev go --directory my-project --model gpt-5.3-codex --spec-file requirem
 Come back later and add new features to the same project:
 
 ```bash
-agentic-dev go --directory my-project --model gpt-5.3-codex --spec-file new-features.md
+buildteam go --directory my-project --model gpt-5.3-codex --spec-file new-features.md
 ```
 
 The planner detects what's already built, updates the spec, adds new stories to the backlog, and plans the next milestone.
@@ -26,7 +26,7 @@ The planner detects what's already built, updates the spec, adds new stories to 
 ## Resuming Where You Left Off
 
 ```bash
-agentic-dev go --directory my-project --model gpt-5.3-codex
+buildteam go --directory my-project --model gpt-5.3-codex
 ```
 
 No spec needed — just re-evaluates the plan and continues building.
@@ -36,7 +36,7 @@ No spec needed — just re-evaluates the plan and continues building.
 Point `--directory` at any existing project directory:
 
 ```bash
-agentic-dev go --directory /path/to/runs/20260213/my-app --model gpt-5.3-codex
+buildteam go --directory /path/to/runs/20260213/my-app --model gpt-5.3-codex
 ```
 
 `go` detects the existing repo on GitHub via `gh repo view` and automatically clones any missing agent directories. You can resume on a fresh machine with nothing but the repo.
@@ -46,7 +46,7 @@ agentic-dev go --directory /path/to/runs/20260213/my-app --model gpt-5.3-codex
 Launch multiple builder agents that claim and build stories concurrently:
 
 ```bash
-agentic-dev go --directory my-project --model gpt-5.3-codex --builders 3
+buildteam go --directory my-project --model gpt-5.3-codex --builders 3
 ```
 
 Each builder runs in its own `builder-N/` clone and uses git-based optimistic locking on BACKLOG.md to claim stories. Stories with minimal dependencies can be built in parallel.
@@ -57,21 +57,21 @@ After `go` has created a project, you can run individual agents if needed:
 
 ```bash
 cd my-project/builder-1
-agentic-dev plan
-agentic-dev build
-agentic-dev build --loop
+buildteam plan
+buildteam build
+buildteam build --loop
 
 cd ../reviewer-1
-agentic-dev commitwatch
+buildteam commitwatch
 
 cd ../milestone-reviewer
-agentic-dev milestonewatch
+buildteam milestonewatch
 
 cd ../tester
-agentic-dev testloop
+buildteam testloop
 
 cd ../validator
-agentic-dev validateloop
+buildteam validateloop
 ```
 
 > **Note:** Always use `go` for new projects — it runs bootstrap, plan, and launches all agents automatically. Do not run `bootstrap` directly.
@@ -165,6 +165,6 @@ tail -f logs/builder.log
 | `copilot` not recognized | Install GitHub Copilot CLI and ensure it's on your PATH |
 | Agents conflict on files | Make sure each runs in its own clone directory |
 | Watchers don't detect commits | Builder must `push`, not just `commit` |
-| `ModuleNotFoundError: typer` | Run `pip install .` from the multi-agent-dev directory |
-| `agentic-dev` not recognized | Run `pip install .` and reopen your terminal |
+| `ModuleNotFoundError: typer` | Run `pip install .` from the buildteam directory |
+| `buildteam` not recognized | Run `pip install .` and reopen your terminal |
 | `python3` not found | Install Python 3.8+ and ensure it's on your PATH |

@@ -7,16 +7,16 @@ from typing import Annotated
 
 import typer
 
-from agentic_dev.code_analysis import run_milestone_analysis
-from agentic_dev.git_helpers import git_push_with_retry
-from agentic_dev.milestone import (
+from buildteam.code_analysis import run_milestone_analysis
+from buildteam.git_helpers import git_push_with_retry
+from buildteam.milestone import (
     load_milestone_boundaries,
     load_reviewed_milestones,
     save_milestone_checkpoint,
 )
-from agentic_dev.prompts import REVIEWER_MILESTONE_PROMPT
-from agentic_dev.sentinel import is_builder_done
-from agentic_dev.utils import log, resolve_logs_dir, run_cmd, run_copilot
+from buildteam.prompts import REVIEWER_MILESTONE_PROMPT
+from buildteam.sentinel import is_builder_done
+from buildteam.utils import log, resolve_logs_dir, run_cmd, run_copilot
 
 
 def find_unreviewed_milestones(boundaries: list[dict], reviewed: set[str]) -> list[dict]:

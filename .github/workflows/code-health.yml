@@ -27,7 +27,7 @@ jobs:
             BASELINE_FLAG="--baseline .code-health-baseline.json"
           fi
           python scripts/code_health_check.py \
-            --src-dir src/agent \
+            --src-dir src/buildteam \
             $BASELINE_FLAG \
             --format markdown > report.md 2>&1 || true
           # Check if violations were found (header says "N issues found" or "hard violation")
@@ -45,7 +45,7 @@ jobs:
             BASELINE_FLAG="--baseline .code-health-baseline.json"
           fi
           python scripts/code_health_check.py \
-            --src-dir src/agent \
+            --src-dir src/buildteam \
             $BASELINE_FLAG \
             --format json > report.json 2>&1 || true
 

@@ -19,6 +19,36 @@ else
     done
 fi
 
+# --- Key Vault: fetch GitHub token ---
+# When BUILDTEAM_KEYVAULT is set, retrieve the GitHub PAT from Key Vault using
+# managed identity. This is more secure than passing GITHUB_TOKEN as an env var
+# (which is visible in the Azure portal and ARM API).
+#   BUILDTEAM_KEYVAULT        - Key Vault name
+#   BUILDTEAM_KEYVAULT_SECRET - secret name (default: "github-token")
+if [ -n "${BUILDTEAM_KEYVAULT:-}" ]; then
+    KV_SECRET="${BUILDTEAM_KEYVAULT_SECRET:-github-token}"
+    echo "Fetching GitHub token from Key Vault: ${BUILDTEAM_KEYVAULT}/${KV_SECRET}"
+
+    # Login with managed identity if not already logged in
+    az account show -o none 2>/dev/null || {
+        echo "Logging in with managed identity for Key Vault access..."
+        az login --identity --allow-no-subscriptions -o none 2>/dev/null || {
+            echo "✗ az login --identity failed — cannot access Key Vault"
+            exit 1
+        }
+    }
+
+    GITHUB_TOKEN=$(az keyvault secret show \
+        --vault-name "$BUILDTEAM_KEYVAULT" \
+        --name "$KV_SECRET" \
+        --query value -o tsv 2>/dev/null) || {
+        echo "✗ Failed to read secret '${KV_SECRET}' from Key Vault '${BUILDTEAM_KEYVAULT}'"
+        exit 1
+    }
+    export GITHUB_TOKEN
+    echo "✓ GitHub token loaded from Key Vault"
+fi
+
 # --- Authenticate gh CLI and copilot CLI ---
 # gh uses GITHUB_TOKEN env var directly — no 'gh auth login' needed.
 # copilot CLI checks COPILOT_GITHUB_TOKEN first, then GITHUB_TOKEN, then gh auth.
@@ -67,10 +97,12 @@ if [ -n "${BUILDTEAM_BLOB_ACCOUNT:-}" ]; then
     SPEC_DEST="${BUILDTEAM_SPEC_DEST:-/workspace/data/spec.md}"
     BLOB_LOGS_CONTAINER="${BUILDTEAM_BLOB_LOGS_CONTAINER:-$BLOB_CONTAINER}"
 
-    # Login using managed identity for az CLI blob operations
-    echo "Logging in with managed identity..."
-    az login --identity --allow-no-subscriptions -o none 2>/dev/null || {
-        echo "⚠ az login --identity failed — blob sync will not work"
+    # Login using managed identity for az CLI blob operations (skip if already logged in via Key Vault)
+    az account show -o none 2>/dev/null || {
+        echo "Logging in with managed identity..."
+        az login --identity --allow-no-subscriptions -o none 2>/dev/null || {
+            echo "⚠ az login --identity failed — blob sync will not work"
+        }
     }
 
     # Download spec

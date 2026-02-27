@@ -56,6 +56,11 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
 RUN curl -fsSL https://gh.io/copilot-install | bash
 
 # ---------------------------------------------------------------------------
+# Azure CLI (for managed identity login, Key Vault, blob storage on ACI)
+# ---------------------------------------------------------------------------
+RUN curl -sL https://aka.ms/InstallAzureCLIDeb | bash
+
+# ---------------------------------------------------------------------------
 # Git: default branch = main
 # ---------------------------------------------------------------------------
 RUN git config --global init.defaultBranch main

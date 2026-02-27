@@ -1,0 +1,53 @@
+name: Build and Push to ACR
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '*.md'
+      - 'docs/**'
+      - 'tests/harness/runs/**'
+  workflow_dispatch:
+
+permissions:
+  id-token: write   # Required for OIDC federated credential
+  contents: read
+
+env:
+  ACR_LOGIN_SERVER: crautodevdev.azurecr.io
+  IMAGE_NAME: buildteam
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Login to ACR
+        run: az acr login --name crautodevdev
+
+      - name: Build and push image
+        run: |
+          SHORT_SHA="${GITHUB_SHA::7}"
+          docker build \
+            --label "org.opencontainers.image.revision=${GITHUB_SHA}" \
+            --label "org.opencontainers.image.source=https://github.com/${{ github.repository }}" \
+            -t ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${SHORT_SHA} \
+            -t ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest \
+            .
+          docker push ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${SHORT_SHA}
+          docker push ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest
+
+      - name: Summary
+        run: |
+          SHORT_SHA="${GITHUB_SHA::7}"
+          echo "### Image pushed" >> "$GITHUB_STEP_SUMMARY"
+          echo "- \`${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${SHORT_SHA}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- \`${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest\`" >> "$GITHUB_STEP_SUMMARY"

@@ -21,6 +21,7 @@ from buildteam.milestone import (
     save_milestone_checkpoint,
 )
 from buildteam.prompts import (
+    VALIDATOR_CLI_PROMPT,
     VALIDATOR_JOURNEY_RESULTS_TAGS,
     VALIDATOR_JOURNEY_SECTION,
     VALIDATOR_LEGACY_RESULTS_TAGS,
@@ -53,6 +54,38 @@ def compute_project_ports(project_name: str) -> tuple[int, int]:
     digest = hashlib.sha256(project_name.encode()).hexdigest()
     base = int(digest, 16) % 6000 + 3000
     return base, base + 1
+
+
+_CLI_KEYWORDS = (
+    "CLI", "command-line", "command line", "console app", "terminal tool",
+    "argparse", "click", "typer", "sys.argv", "process.argv",
+    "takes arguments", "prints output", "exit code",
+)
+
+
+def detect_is_cli_app(repo_dir: str) -> bool:
+    """Return True if the project is a CLI/console application, not a server.
+
+    Checks SPEC.md for CLI-related keywords AND confirms there are no
+    server-related keywords. A fullstack app that also has a CLI component
+    should NOT be treated as a CLI app.
+    """
+    spec_path = os.path.join(repo_dir, "SPEC.md")
+    if not os.path.isfile(spec_path):
+        return False
+    try:
+        content = open(spec_path, encoding="utf-8").read().lower()
+    except OSError:
+        return False
+
+    server_keywords = ("api", "endpoint", "http", "server", "web app", "rest",
+                       "frontend", "dashboard", "database", "port")
+    has_server_signal = any(kw.lower() in content for kw in server_keywords)
+    if has_server_signal:
+        return False
+
+    has_cli_signal = any(kw.lower() in content for kw in _CLI_KEYWORDS)
+    return has_cli_signal
 
 
 def detect_has_frontend(repo_dir: str) -> bool:
@@ -392,26 +425,37 @@ def _validate_milestone(boundary: dict, project_name: str, save_traces: bool = F
     run_cmd(["git", "checkout", boundary["end_sha"]], quiet=True)
     _cleanup_containers()
 
-    has_frontend = detect_has_frontend(".")
+    is_cli = detect_is_cli_app(".")
     milestone_label = boundary.get("label", "")
-    ui_instructions = VALIDATOR_PLAYWRIGHT_SECTION.format(milestone_label=milestone_label) if has_frontend else ""
-    if has_frontend and save_traces:
-        ui_instructions += "\n\n" + VALIDATOR_PLAYWRIGHT_TRACE_SECTION
 
-    validation_scope, results_tag_instructions = _build_validation_scope(boundary)
+    if is_cli:
+        log("validator", "CLI app detected — using lightweight validation", style="cyan")
+        prompt = VALIDATOR_CLI_PROMPT.format(
+            milestone_name=boundary["name"],
+            milestone_start_sha=boundary["start_sha"],
+            milestone_end_sha=boundary["end_sha"],
+            milestone_label=milestone_label,
+        )
+    else:
+        has_frontend = detect_has_frontend(".")
+        ui_instructions = VALIDATOR_PLAYWRIGHT_SECTION.format(milestone_label=milestone_label) if has_frontend else ""
+        if has_frontend and save_traces:
+            ui_instructions += "\n\n" + VALIDATOR_PLAYWRIGHT_TRACE_SECTION
 
-    prompt = VALIDATOR_MILESTONE_PROMPT.format(
-        milestone_name=boundary["name"],
-        milestone_start_sha=boundary["start_sha"],
-        milestone_end_sha=boundary["end_sha"],
-        validation_scope=validation_scope,
-        results_tag_instructions=results_tag_instructions,
-        ui_testing_instructions=ui_instructions,
-        compose_project_name=compose_name,
-        app_port=app_port,
-        secondary_port=secondary_port,
-        milestone_label=boundary.get("label", ""),
-    )
+        validation_scope, results_tag_instructions = _build_validation_scope(boundary)
+
+        prompt = VALIDATOR_MILESTONE_PROMPT.format(
+            milestone_name=boundary["name"],
+            milestone_start_sha=boundary["start_sha"],
+            milestone_end_sha=boundary["end_sha"],
+            validation_scope=validation_scope,
+            results_tag_instructions=results_tag_instructions,
+            ui_testing_instructions=ui_instructions,
+            compose_project_name=compose_name,
+            app_port=app_port,
+            secondary_port=secondary_port,
+            milestone_label=milestone_label,
+        )
     exit_code = run_copilot("validator", prompt)
 
     _copy_validation_results(boundary["name"])

@@ -1,5 +1,6 @@
 """Orchestrator: the 'go' command that detects, bootstraps, and coordinates all agents."""
 
+import json as _json
 import os
 import re
 import shutil
@@ -237,13 +238,56 @@ def _generate_copilot_instructions(model: str = "") -> None:
 
 
 # ============================================
+# Run metadata
+# ============================================
+
+
+def _write_run_metadata(
+    project_name: str,
+    model: str,
+    agent_models: AgentModels,
+    num_builders: int,
+    headless: bool,
+) -> None:
+    """Write logs/run-metadata.json with run configuration.
+
+    This is the authoritative metadata record for a run. It is written once at
+    startup into the logs directory (which may be volume-mounted in Docker).
+    External tooling reads this file to correlate events.jsonl with run config.
+    """
+    try:
+        from buildteam.version import get_version_info
+        version_info = get_version_info()
+    except Exception:
+        version_info = "unknown"
+
+    record = {
+        "project_name": project_name,
+        "model": model,
+        "agent_models": {k: v for k, v in agent_models.items() if v != model},
+        "num_builders": num_builders,
+        "headless": headless,
+        "version": version_info,
+        "started_at": datetime.now(timezone.utc).isoformat(),
+    }
+    try:
+        from buildteam.utils import resolve_logs_dir
+        logs_dir = resolve_logs_dir()
+        meta_path = os.path.join(logs_dir, "run-metadata.json")
+        with open(meta_path, "w", encoding="utf-8") as f:
+            _json.dump(record, f, indent=2, default=str)
+    except Exception:
+        pass  # Never crash over metadata
+
+
+# ============================================
 # Agent launching and build orchestration
 # ============================================
 
 
 def _launch_agents_and_build(
     parent_dir: str, plan_label: str, project_name: str = "",
-    requirements_changed: bool = False, num_builders: int = 1,
+    requirements_changed: bool = False, num_builders: int = 2,
     agent_models: AgentModels | None = None,
 ) -> None:
     """Run planner, spawn all agents (including builders) in terminals, then poll for completion."""
@@ -449,7 +493,7 @@ def go(
     spec_file: Annotated[str, typer.Option(help="Path to a markdown file containing the project requirements")] = None,
     name: Annotated[str, typer.Option(help="GitHub repo name (defaults to directory basename)")] = None,
     org: Annotated[str, typer.Option(help="GitHub org to create the repo in (defaults to personal account)")] = None,
-    builders: Annotated[int, typer.Option(help="Number of parallel builders (default 1)")] = 1,
+    builders: Annotated[int, typer.Option(help="Number of parallel builders (default 2, range 2-8)", min=2, max=8)] = 2,
     builder_model: Annotated[str, typer.Option(help="Model override for builder agents")] = None,
     reviewer_model: Annotated[str, typer.Option(help="Model override for commit-watcher reviewers")] = None,
     milestone_reviewer_model: Annotated[str, typer.Option(help="Model override for the milestone reviewer")] = None,
@@ -466,7 +510,7 @@ def go(
 
     --directory is the project working directory — relative or absolute.
     --name optionally overrides the GitHub repo name (defaults to basename of directory).
-    --builders controls how many parallel builder agents are launched (default 1).
+    --builders controls how many parallel builder agents are launched (default 2, range 2-8).
     --headless runs all agents as headless background processes (auto-enabled inside containers).
 
     Per-agent model overrides (all optional, default to --model):
@@ -499,8 +543,7 @@ def go(
         if role_model != default_model:
             display_role = role.replace("_", "-")
             console.print(f"  {display_role}: {role_model}", style="green")
-    if builders > 1:
-        console.print(f"Parallel builders: {builders}", style="bold green")
+    console.print(f"Parallel builders: {builders}", style="bold green")
 
     start_dir = os.getcwd()
 
@@ -510,6 +553,17 @@ def go(
         return
 
     project_name = name or os.path.basename(parent_dir)
+
+    # Write machine-readable run metadata to the logs directory so headless
+    # consumers (CI, dashboards) can discover run parameters from the
+    # mounted volume without parsing log text.
+    _write_run_metadata(
+        project_name=project_name,
+        model=default_model,
+        agent_models=agent_models,
+        num_builders=builders,
+        headless=bool(os.environ.get("BUILDTEAM_HEADLESS")),
+    )
 
     gh_org = org or ""
 

@@ -158,6 +158,13 @@ def create_milestone_branch(builder_id: int, milestone_name: str, agent_name: st
     """
     branch_name = f"builder-{builder_id}/{milestone_name}"
 
+    # Clean up any leftover local/remote branch from a prior failed attempt
+    existing = run_cmd(["git", "branch", "--list", branch_name], capture=True)
+    if existing.returncode == 0 and existing.stdout.strip():
+        run_cmd(["git", "branch", "-D", branch_name], quiet=True)
+        log(agent_name, f"Deleted stale local branch: {branch_name}", style="yellow")
+    run_cmd(["git", "push", "origin", "--delete", branch_name], quiet=True)
+
     result = run_cmd(["git", "checkout", "-b", branch_name], capture=True)
     if result.returncode != 0:
         log(agent_name, f"Failed to create branch {branch_name}", style="red")
@@ -332,11 +339,23 @@ def merge_milestone_to_main(
         # Tag the merge commit
         run_cmd(["git", "tag", milestone_name, "HEAD"], quiet=True)
 
+        # Push main ref and tags separately so a stale remote tag can't
+        # block the main push (and vice versa).
         push_result = run_cmd(
-            ["git", "push", "origin", "main", "--tags"],
+            ["git", "push", "origin", "main"],
             capture=True,
         )
         if push_result.returncode == 0:
+            # Main pushed OK — now push the tag (best-effort: a failure
+            # here is non-fatal since the merge commit is already on main).
+            tag_push = run_cmd(
+                ["git", "push", "origin", f"refs/tags/{milestone_name}"],
+                capture=True,
+            )
+            if tag_push.returncode != 0:
+                tag_err = tag_push.stderr.strip() or tag_push.stdout.strip()
+                log(agent_name, f"Tag push failed (non-fatal): {tag_err[:200]}", style="yellow")
+
             sha_result = run_cmd(["git", "rev-parse", "HEAD"], capture=True)
             merge_sha = sha_result.stdout.strip() if sha_result.returncode == 0 else ""
             log(
@@ -346,13 +365,16 @@ def merge_milestone_to_main(
             )
             return merge_sha
 
-        # Push failed — another agent pushed to main. Reset and retry.
+        # Push failed — log the actual error for diagnostics.
+        push_err = push_result.stderr.strip() or push_result.stdout.strip()
         log(
             agent_name,
-            f"Push rejected after merge (attempt {attempt}/{max_attempts}), resetting...",
+            f"Push rejected after merge (attempt {attempt}/{max_attempts}): {push_err[:300]}",
             style="yellow",
         )
         run_cmd(["git", "tag", "-d", milestone_name], quiet=True)
+        # Also delete the tag from remote in case a prior attempt pushed it
+        run_cmd(["git", "push", "origin", f":refs/tags/{milestone_name}"], quiet=True)
         run_cmd(["git", "reset", "--hard", "origin/main"], quiet=True)
         rebase_attempted = False  # allow rebase on fresh main state
         copilot_resolution_attempted = False  # allow Copilot resolution on fresh main state
@@ -368,8 +390,9 @@ def delete_milestone_branch(branch_name: str, agent_name: str) -> None:
 
     Best-effort — swallows failures since the branch may already be gone
     (e.g. from a prior cleanup or manual deletion).
+    Uses -D (force) because the branch may be unmerged after a failed build.
     """
-    run_cmd(["git", "branch", "-d", branch_name], quiet=True)
+    run_cmd(["git", "branch", "-D", branch_name], quiet=True)
     run_cmd(["git", "push", "origin", "--delete", branch_name], quiet=True)
     log(agent_name, f"Deleted branch: {branch_name}", style="cyan")
 

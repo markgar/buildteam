@@ -273,6 +273,25 @@ def _stream_with_idle_timeout(
     return proc.returncode
 
 
+def _save_full_prompt(agent_name: str, prompt: str) -> str:
+    """Save the full prompt text to logs/prompts/<agent>-<timestamp>.txt.
+
+    Returns the path to the saved file, or empty string on failure.
+    """
+    try:
+        logs_dir = resolve_logs_dir()
+        prompts_dir = os.path.join(logs_dir, "prompts")
+        os.makedirs(prompts_dir, exist_ok=True)
+        ts = datetime.now().strftime("%Y%m%d-%H%M%S")
+        filename = f"{agent_name}-{ts}.txt"
+        filepath = os.path.join(prompts_dir, filename)
+        with open(filepath, "w", encoding="utf-8") as f:
+            f.write(prompt)
+        return filepath
+    except Exception:
+        return ""
+
+
 def _run_copilot_once(agent_name: str, prompt: str, model: str, log_file: str) -> int:
     """Run a single copilot invocation. Returns the exit code."""
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -322,6 +341,10 @@ def run_copilot(agent_name: str, prompt: str, model: str = "") -> int:
     logs_dir = resolve_logs_dir()
     log_file = os.path.join(logs_dir, f"{agent_name}.log")
 
+    _save_full_prompt(agent_name, prompt)
+    emit_event(agent_name, "copilot_call_started", model=model)
+    start_time = time.monotonic()
+
     exit_code = _run_copilot_once(agent_name, prompt, model, log_file)
 
     # Retry once on idle timeout
@@ -330,6 +353,8 @@ def run_copilot(agent_name: str, prompt: str, model: str = "") -> int:
         exit_code = _run_copilot_once(agent_name, prompt, model, log_file)
         if exit_code == _TIMEOUT_EXIT_CODE:
             log(agent_name, "[Timeout] Copilot call timed out again — giving up.", style="red")
+        duration_s = round(time.monotonic() - start_time, 1)
+        emit_event(agent_name, "copilot_call_completed", model=model, exit_code=exit_code, duration_s=duration_s)
         return exit_code
 
     if exit_code != 0 and _detect_auth_failure(log_file):
@@ -340,6 +365,8 @@ def run_copilot(agent_name: str, prompt: str, model: str = "") -> int:
         else:
             log(agent_name, "[Auth] Refresh failed — cannot recover without manual login.", style="red")
 
+    duration_s = round(time.monotonic() - start_time, 1)
+    emit_event(agent_name, "copilot_call_completed", model=model, exit_code=exit_code, duration_s=duration_s)
     return exit_code
 
 

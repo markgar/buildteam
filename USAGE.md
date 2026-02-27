@@ -84,7 +84,7 @@ buildteam validateloop
 | `go --directory D --model M --spec-file F` | Same, but reads requirements from a markdown file | Once, from anywhere |
 | `go --directory D --model M ... --name N` | Same, but overrides the GitHub repo name (defaults to dirname) | Once, from anywhere |
 | `go --directory D --model M ... --org O` | Same, but creates the repo under a GitHub organization | Once, from anywhere |
-| `go --directory D --model M ... --builders N` | Same, but launches N parallel builders (default 1) | Once, from anywhere |
+| `go --directory D --model M ... --builders N` | Same, but launches N parallel builders (default 2, range 2-8) | Once, from anywhere |
 | `go --directory D --model M --spec-file F` (existing) | Updates requirements, re-plans, launches agents, builds | From anywhere |
 | `go --directory D --model M` (existing) | Re-plans, launches agents, resumes building | From anywhere |
 | `plan` | Creates or updates BACKLOG.md and milestone files in `milestones/` (one milestone at a time) | builder-1/, on demand |

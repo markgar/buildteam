@@ -10,6 +10,7 @@ from buildteam.prompts import BOOTSTRAP_PROMPT
 from buildteam.utils import (
     check_command,
     console,
+    emit_event,
     is_macos,
     is_windows,
     log,
@@ -278,9 +279,10 @@ def _scaffold_project(directory, name, description, gh_user, org=""):
     # Pre-initialize git in builder/ so copilot never accidentally commits
     # to a parent repo when the project dir is nested inside another git tree
     # (e.g. test harness runs under buildteam).
-    run_cmd(["git", "init"], cwd=builder_dir, quiet=True)
+    run_cmd(["git", "init", "-b", "main"], cwd=builder_dir, quiet=True)
 
     prompt = BOOTSTRAP_PROMPT.format(description=description, gh_user=owner, name=name)
+    emit_event("bootstrap", "bootstrap_started", name=name)
     exit_code = run_copilot("bootstrap", prompt)
 
     if exit_code != 0:
@@ -288,6 +290,7 @@ def _scaffold_project(directory, name, description, gh_user, org=""):
         log("bootstrap", "======================================", style="bold red")
         log("bootstrap", " Bootstrap failed! Check errors above", style="bold red")
         log("bootstrap", "======================================", style="bold red")
+        emit_event("bootstrap", "bootstrap_completed", name=name, success=False)
         return False
 
     _clone_agent_copies(owner, name)
@@ -298,6 +301,7 @@ def _scaffold_project(directory, name, description, gh_user, org=""):
     log("bootstrap", "======================================", style="bold green")
     log("bootstrap", " Bootstrap complete!", style="bold green")
     log("bootstrap", "======================================", style="bold green")
+    emit_event("bootstrap", "bootstrap_completed", name=name, success=True)
     return True
 
 

@@ -13,7 +13,7 @@ from buildteam.prompts import (
     PLANNER_PROMPT,
     PLANNER_SPLIT_PROMPT,
 )
-from buildteam.utils import log, run_cmd, run_copilot
+from buildteam.utils import emit_event, log, run_cmd, run_copilot
 
 
 _MAX_TASKS_PER_MILESTONE = 8
@@ -47,6 +47,8 @@ def plan(requirements_changed: bool = False, story_name: str = "", model: str = 
     os.makedirs("milestones", exist_ok=True)
 
     is_fresh = not os.path.exists("BACKLOG.md")
+    planning_mode = "backlog" if is_fresh else "milestone"
+    emit_event("planner", "planning_started", mode=planning_mode, story_name=story_name)
 
     # Use backlog_model for initial creation, fall back to model
     creation_model = backlog_model or model
@@ -62,6 +64,7 @@ def plan(requirements_changed: bool = False, story_name: str = "", model: str = 
             log("planner", "======================================", style="bold red")
             log("planner", " Planner failed! Check errors above", style="bold red")
             log("planner", "======================================", style="bold red")
+            emit_event("planner", "planning_completed", mode=planning_mode, success=False)
             return False
 
         # Completeness pass: validate backlog covers all requirements
@@ -83,12 +86,14 @@ def plan(requirements_changed: bool = False, story_name: str = "", model: str = 
                 log("planner", "======================================", style="bold red")
                 log("planner", " Planner could not produce a valid plan. Stopping.", style="bold red")
                 log("planner", "======================================", style="bold red")
+                emit_event("planner", "planning_completed", mode=planning_mode, success=False)
                 return False
             if exit_code != 0:
                 log("planner", "")
                 log("planner", "======================================", style="bold red")
                 log("planner", " Re-plan failed. Planner could not produce a valid plan. Stopping.", style="bold red")
                 log("planner", "======================================", style="bold red")
+                emit_event("planner", "planning_completed", mode=planning_mode, success=False)
                 return False
 
             # Re-check after re-plan — if still failing, stop
@@ -98,6 +103,7 @@ def plan(requirements_changed: bool = False, story_name: str = "", model: str = 
                 log("planner", "======================================", style="bold red")
                 log("planner", " Planner could not resolve structural issues after re-plan. Stopping.", style="bold red")
                 log("planner", "======================================", style="bold red")
+                emit_event("planner", "planning_completed", mode=planning_mode, success=False)
                 return False
 
         # Ordering pass: ensure stories are in topological dependency order
@@ -133,12 +139,14 @@ def plan(requirements_changed: bool = False, story_name: str = "", model: str = 
             log("planner", "======================================", style="bold red")
             log("planner", " Planner failed! Check errors above", style="bold red")
             log("planner", "======================================", style="bold red")
+            emit_event("planner", "planning_completed", mode=planning_mode, success=False)
             return False
 
     log("planner", "")
     log("planner", "======================================", style="bold magenta")
     log("planner", " Plan updated!", style="bold magenta")
     log("planner", "======================================", style="bold magenta")
+    emit_event("planner", "planning_completed", mode=planning_mode, success=True)
     return True
 
 

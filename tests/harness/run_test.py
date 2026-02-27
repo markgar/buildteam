@@ -234,7 +234,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--model", required=True, help="Copilot model (e.g. claude-haiku-4.5, claude-opus-4.6)")
     parser.add_argument("--spec-file", default=None, help="Path to spec markdown file")
     parser.add_argument("--resume", action="store_true", help="Resume the latest run for --name")
-    parser.add_argument("--builders", type=int, default=1, help="Number of parallel builders (default 1)")
+    parser.add_argument("--builders", type=int, default=2, choices=range(2, 9), help="Number of parallel builders (default 2, range 2-8)", metavar="N")
     parser.add_argument("--org", default=None, help="GitHub org (default: personal account)")
     parser.add_argument("--builder-model", default=None, help="Model override for builders")
     parser.add_argument("--reviewer-model", default=None, help="Model override for commit-watcher reviewers")

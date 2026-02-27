@@ -16,21 +16,22 @@ docker run --privileged \
   -v ~/my-project/data:/workspace/data \
   buildteam:latest \
   go --directory /workspace/my-app --model claude-sonnet-4.6 \
-     --spec-file /workspace/data/spec.md --headless --builders 1
+     --spec-file /workspace/data/spec.md --headless --builders 2
 ```
 
 ## What's in the Image
 
-The image is ~1 GB and bundles everything the agents need:
+The image bundles all runtimes so it can build Python, .NET, and Node.js target projects out of the box:
 
-| Component | Size | Purpose |
-|-----------|------|---------|
-| Docker CE (daemon + CLI + containerd) | ~262 MB | Validator agent builds/runs target project containers (Docker-in-Docker) |
-| Copilot CLI | ~138 MB | Standalone binary — the LLM engine all agents invoke |
-| System deps (git, curl, iptables) | ~120 MB | Git operations, downloads |
-| Python 3.12 | ~45 MB | Runs buildteam itself |
-| GitHub CLI (gh) | ~36 MB | Repo creation, issue management, auth |
-| buildteam + pip deps | ~41 MB | This package |
+| Component | Purpose |
+|-----------|---------|
+| Python 3.12 | Runs buildteam itself; builds Python target projects |
+| .NET 10 SDK | Builder/tester compile and test .NET target projects |
+| Node.js 22 LTS | Builder/tester compile and test JS/TS target projects |
+| Docker CE (daemon + CLI + containerd) | Validator agent builds/runs target project containers (Docker-in-Docker) |
+| Copilot CLI | Standalone binary — the LLM engine all agents invoke |
+| GitHub CLI (gh) | Repo creation, issue management, auth |
+| System deps (git, curl, iptables) | Git operations, downloads |
 
 ## Authentication
 
@@ -141,7 +142,7 @@ docker run -d --privileged \
   --name my-build \
   buildteam:latest \
   go --directory /workspace/my-app --model claude-sonnet-4.6 \
-     --spec-file /workspace/data/spec.md --headless --builders 1
+     --spec-file /workspace/data/spec.md --headless --builders 2
 
 # 4. Monitor
 docker logs -f my-build 2>&1 | grep -v '^time='

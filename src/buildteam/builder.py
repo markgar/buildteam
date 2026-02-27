@@ -153,6 +153,7 @@ def claim_next_story(agent_name: str, builder_id: int = 1, max_attempts: int = 1
         push_result = run_cmd(["git", "push"], capture=True)
         if push_result.returncode == 0:
             log(agent_name, f"Claimed story {story['number']}: {story['name']}", style="green")
+            emit_event(agent_name, "story_claimed", story_number=story["number"], story_name=story["name"])
             return story
 
         # Push failed -- another commit was pushed to the remote.
@@ -199,6 +200,7 @@ def mark_story_completed(story_number: int, agent_name: str, max_attempts: int =
 
         push_result = run_cmd(["git", "push"], capture=True)
         if push_result.returncode == 0:
+            emit_event(agent_name, "story_completed", story_number=story_number)
             return True
 
         log(
@@ -305,17 +307,17 @@ def _build_partition_filter(builder_id: int, num_builders: int) -> str:
 # ============================================
 
 
-def _cleanup_orphaned_milestones(story_number: int, agent_name: str) -> None:
-    """Remove incomplete milestone files for a story after a build failure.
+def _cleanup_orphaned_milestones(story_number: int, agent_name: str, force: bool = False) -> None:
+    """Remove orphaned milestone files for a story after a build failure.
 
     When a builder fails mid-story (e.g. merge conflict), its milestone files
-    remain on main with unchecked tasks. If another builder later claims the
-    same story, the planner creates fresh milestones — but the old incomplete
-    milestones would also be picked up by the prefix match in the build loop.
-    This function deletes the orphaned files so the next builder starts clean.
+    remain on main. If another builder later claims the same story, the planner
+    creates fresh milestones — but the old milestones would interfere.
 
-    Deletes milestone files matching milestone-{NN}* that have unchecked tasks.
-    Completed milestone files (all tasks checked) are left alone.
+    With force=False (default): only deletes milestones with unchecked tasks.
+    With force=True: deletes ALL milestones for the story, including fully-
+    checked ones. Use force=True when a merge failure means the completed work
+    never reached main despite all tasks being checked in the file.
     """
     milestones_dir = "milestones"
     story_prefix = f"milestone-{story_number:02d}"
@@ -323,7 +325,7 @@ def _cleanup_orphaned_milestones(story_number: int, agent_name: str) -> None:
     orphans = []
     for ms in get_all_milestones(milestones_dir):
         basename = os.path.basename(ms["path"])
-        if basename.startswith(story_prefix) and not ms["all_done"]:
+        if basename.startswith(story_prefix) and (force or not ms["all_done"]):
             orphans.append(ms["path"])
 
     if not orphans:
@@ -489,6 +491,7 @@ def _check_remaining_work(
 # ============================================
 
 _ISSUE_POLL_INTERVAL = 30  # seconds between polls when no issues found
+_ISSUE_DRAIN_CYCLES = 20   # 30s * 20 = 10 minutes drain after milestone builders done
 
 
 def _format_issue_list(issues: list[dict]) -> str:
@@ -516,8 +519,10 @@ def _run_issue_builder_loop(
 
     Polls for eligible issues. When any exist, builds a prompt with the specific
     issue numbers and runs a fix-only Copilot session on main. When none exist,
-    checks whether all milestone builders have finished. If so, writes its own
-    sentinel and returns. Otherwise sleeps and polls again.
+    checks whether all milestone builders have finished. If so, enters a bounded
+    drain phase — keeps polling for new issues for up to _ISSUE_DRAIN_CYCLES
+    (10 minutes) to catch bugs filed by the last validator/tester/reviewer runs,
+    then exits. Any issue found during drain resets the counter.
     """
     from buildteam.milestone import get_merged_milestone_labels
     from buildteam.sentinel import are_other_builders_done
@@ -549,21 +554,31 @@ def _run_issue_builder_loop(
 
         # No eligible issues right now — check if milestone builders are all done
         if are_other_builders_done(builder_id):
-            # All builders (including us if sentinel already written) are done.
-            # Do one final check for issues that may have been filed during shutdown.
-            merged_labels = get_merged_milestone_labels()
-            eligible_issues = list_open_issues_for_milestones(merged_labels)
-            if eligible_issues:
-                issue_list = _format_issue_list(eligible_issues)
-                log(agent_name, f"[Issue Builder] {len(eligible_issues)} issue(s) filed during "
-                    "shutdown. Fixing...", style="green")
-                prompt = BUILDER_FIX_ONLY_PROMPT.format(issue_list=issue_list)
-                run_copilot(agent_name, prompt)
-                continue
+            # Milestone builders finished. Downstream agents (reviewer, tester,
+            # validator) may still be running their final Copilot sessions and
+            # filing issues. Enter a bounded drain loop: keep polling for new
+            # issues for up to _ISSUE_DRAIN_CYCLES. Any fix resets the counter.
+            log(agent_name, "")
+            log(agent_name, "[Issue Builder] All milestone builders done. "
+                "Draining issues for up to 10 minutes...", style="yellow")
+            drain_cycles = 0
+            while drain_cycles < _ISSUE_DRAIN_CYCLES:
+                time.sleep(_ISSUE_POLL_INTERVAL)
+                drain_cycles += 1
+                run_cmd(["git", "pull", "--rebase", "-q"], quiet=True)
+                merged_labels = get_merged_milestone_labels()
+                eligible_issues = list_open_issues_for_milestones(merged_labels)
+                if eligible_issues:
+                    issue_list = _format_issue_list(eligible_issues)
+                    log(agent_name, f"[Issue Builder] {len(eligible_issues)} issue(s) filed "
+                        "during drain. Fixing...", style="green")
+                    prompt = BUILDER_FIX_ONLY_PROMPT.format(issue_list=issue_list)
+                    run_copilot(agent_name, prompt)
+                    drain_cycles = 0  # reset — more issues may come
 
             log(agent_name, "")
-            log(agent_name, "[Issue Builder] All milestone builders done, no open issues. "
-                "Shutting down.", style="bold green")
+            log(agent_name, "[Issue Builder] Drain complete. Shutting down.",
+                style="bold green")
             write_builder_done(builder_id)
             emit_event(agent_name, "builder_done", builder_id=builder_id, role="issue")
             return
@@ -768,6 +783,7 @@ def build(
                 log(agent_name, "======================================", style="bold red")
                 log(agent_name, " Builder failed! Check errors above", style="bold red")
                 log(agent_name, "======================================", style="bold red")
+                emit_event(agent_name, "build_failed", milestone=milestone_basename, builder_id=builder_id, reason="copilot_exit_nonzero")
                 ensure_on_main(agent_name)
                 build_failed = True
                 break
@@ -776,6 +792,7 @@ def build(
             merge_sha = merge_milestone_to_main(branch_name, milestone_basename, agent_name)
             if not merge_sha:
                 log(agent_name, "Merge to main failed. Stopping builder.", style="bold red")
+                emit_event(agent_name, "build_failed", milestone=milestone_basename, builder_id=builder_id, reason="merge_failed")
                 ensure_on_main(agent_name)
                 build_failed = True
                 break
@@ -798,7 +815,9 @@ def build(
                 delete_milestone_branch(branch_name, agent_name)
             # Clean up orphaned milestone files so the next builder that claims
             # this story plans fresh milestones instead of inheriting stale ones.
-            _cleanup_orphaned_milestones(story["number"], agent_name)
+            # Force cleanup even for fully-checked milestones — a merge failure
+            # means the work never reached main despite tasks being checked.
+            _cleanup_orphaned_milestones(story["number"], agent_name, force=True)
             unclaim_story(story["number"], agent_name)
             # Don't terminate — continue the claim loop to try other stories.
             log(agent_name, "Build failed for this story. Continuing to next eligible story...", style="yellow")

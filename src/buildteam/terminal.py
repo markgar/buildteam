@@ -6,7 +6,7 @@ import subprocess
 import sys
 import tempfile
 
-from buildteam.utils import check_command, console, is_container, is_macos, is_windows
+from buildteam.utils import check_command, console, is_container, is_macos, is_windows, resolve_logs_dir
 
 
 def _is_headless() -> bool:
@@ -127,7 +127,7 @@ def _spawn_headless(working_dir: str, command: str, model: str = "") -> None:
     os.chmod(temp_script, 0o755)
 
     # Open log file for stdout/stderr so output isn't lost
-    logs_dir = os.path.join(os.path.dirname(working_dir), "logs")
+    logs_dir = resolve_logs_dir()
     os.makedirs(logs_dir, exist_ok=True)
     agent_name = os.path.basename(working_dir)
     log_path = os.path.join(logs_dir, f"{agent_name}-spawn.log")

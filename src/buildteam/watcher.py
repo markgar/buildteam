@@ -24,7 +24,7 @@ from buildteam.sentinel import (
     load_reviewer_checkpoint,
     save_reviewer_checkpoint,
 )
-from buildteam.utils import log, resolve_logs_dir, run_cmd, run_copilot
+from buildteam.utils import emit_event, log, resolve_logs_dir, run_cmd, run_copilot
 
 
 def register(app: typer.Typer) -> None:
@@ -142,6 +142,8 @@ def _review_branch_commits(
         log(agent_name, f"[{now}] No reviewable commits. Watching branch...", style="yellow")
         return current_head
 
+    emit_event(agent_name, "review_started", branch=branch_name, commit_count=len(reviewable))
+
     if len(reviewable) == 1:
         commit_sha = reviewable[0]
         now = datetime.now().strftime("%H:%M:%S")
@@ -165,6 +167,7 @@ def _review_branch_commits(
     git_push_with_retry(agent_name)
     last_reviewed = reviewable[-1]
     save_reviewer_checkpoint(last_reviewed, builder_id)
+    emit_event(agent_name, "review_completed", branch=branch_name, commit_count=len(reviewable), exit_code=exit_code)
     return last_reviewed
 
 

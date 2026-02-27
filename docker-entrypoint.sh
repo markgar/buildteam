@@ -58,7 +58,7 @@ if [ -n "${BUILDTEAM_KEYVAULT:-}" ]; then
     GITHUB_TOKEN=$(az keyvault secret show \
         --vault-name "$BUILDTEAM_KEYVAULT" \
         --name "$KV_SECRET" \
-        --query value -o tsv 2>/dev/null) || {
+        --query value -o tsv) || {
         echo "✗ Failed to read secret '${KV_SECRET}' from Key Vault '${BUILDTEAM_KEYVAULT}'"
         exit 1
     }

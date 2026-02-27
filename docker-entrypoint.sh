@@ -99,6 +99,33 @@ echo "✓ python $(python3 --version 2>/dev/null | awk '{print $2}')"
 dotnet --version &>/dev/null && echo "✓ dotnet $(dotnet --version)" || echo "⚠ dotnet not available"
 node --version &>/dev/null && echo "✓ node $(node --version)" || echo "⚠ node not available"
 
+# --- Run ID for log organization ---
+# BUILDTEAM_RUN_ID groups all logs under a blob "folder" so runs don't collide.
+# If not set, extract the --directory value from the command line as a fallback.
+if [ -z "${BUILDTEAM_RUN_ID:-}" ]; then
+    # Parse --directory from $@ (handles both --directory foo and --directory=foo)
+    for i in "$@"; do
+        if [ "$_next_is_dir" = "1" ]; then
+            BUILDTEAM_RUN_ID="$i"
+            break
+        fi
+        case "$i" in
+            --directory=*) BUILDTEAM_RUN_ID="${i#--directory=}"; break ;;
+            --directory)   _next_is_dir=1 ;;
+        esac
+    done
+    unset _next_is_dir
+fi
+BUILDTEAM_RUN_ID="${BUILDTEAM_RUN_ID:-unknown}"
+export BUILDTEAM_RUN_ID
+echo "✓ Run ID: ${BUILDTEAM_RUN_ID}"
+
+# --- Logs directory ---
+# Export BUILDTEAM_LOGS_DIR so buildteam writes logs where the sync reads from.
+LOGS_DIR="${BUILDTEAM_LOGS_DIR:-/workspace/data/logs}"
+mkdir -p "$LOGS_DIR"
+export BUILDTEAM_LOGS_DIR="$LOGS_DIR"
+
 # --- Blob storage: download spec ---
 # When BUILDTEAM_BLOB_ACCOUNT is set, download the spec from blob storage using
 # managed identity (az login is not needed on ACI — IMDS provides the token).
@@ -107,14 +134,15 @@ node --version &>/dev/null && echo "✓ node $(node --version)" || echo "⚠ nod
 #   BUILDTEAM_BLOB_CONTAINER   - blob container name (default: "specs")
 #   BUILDTEAM_BLOB_SPEC        - blob name for the spec file (default: "spec.md")
 #   BUILDTEAM_SPEC_DEST        - local path to write the spec (default: "/workspace/data/spec.md")
-#   BUILDTEAM_LOGS_DIR         - local logs directory to sync (default: auto-detected by buildteam)
 #   BUILDTEAM_BLOB_LOGS_CONTAINER - blob container for logs (default: same as BUILDTEAM_BLOB_CONTAINER)
+#   BUILDTEAM_RUN_ID            - blob path prefix for this run (set above)
 SYNC_PID=""
 if [ -n "${BUILDTEAM_BLOB_ACCOUNT:-}" ]; then
     BLOB_CONTAINER="${BUILDTEAM_BLOB_CONTAINER:-specs}"
     BLOB_SPEC="${BUILDTEAM_BLOB_SPEC:-spec.md}"
     SPEC_DEST="${BUILDTEAM_SPEC_DEST:-/workspace/data/spec.md}"
     BLOB_LOGS_CONTAINER="${BUILDTEAM_BLOB_LOGS_CONTAINER:-$BLOB_CONTAINER}"
+    BLOB_LOGS_PREFIX="${BUILDTEAM_RUN_ID}"
 
     # Download spec
     mkdir -p "$(dirname "$SPEC_DEST")"
@@ -133,15 +161,13 @@ if [ -n "${BUILDTEAM_BLOB_ACCOUNT:-}" ]; then
     fi
 
     # Background log sync — uploads logs/ to blob every 60 seconds
-    LOGS_DIR="${BUILDTEAM_LOGS_DIR:-/workspace/data/logs}"
-    mkdir -p "$LOGS_DIR"
     (
         while true; do
             sleep 60
             az storage blob upload-batch \
                 --account-name "$BUILDTEAM_BLOB_ACCOUNT" \
                 --destination "$BLOB_LOGS_CONTAINER" \
-                --destination-path "logs/" \
+                --destination-path "${BLOB_LOGS_PREFIX}/" \
                 --source "$LOGS_DIR" \
                 --auth-mode login \
                 --overwrite \
@@ -149,7 +175,7 @@ if [ -n "${BUILDTEAM_BLOB_ACCOUNT:-}" ]; then
         done
     ) &
     SYNC_PID=$!
-    echo "✓ Background log sync started (PID $SYNC_PID, every 60s → ${BUILDTEAM_BLOB_ACCOUNT}/${BLOB_LOGS_CONTAINER}/logs/)"
+    echo "✓ Background log sync started (PID $SYNC_PID, every 60s → ${BUILDTEAM_BLOB_ACCOUNT}/${BLOB_LOGS_CONTAINER}/${BLOB_LOGS_PREFIX}/)"
 fi
 
 # --- Run buildteam ---
@@ -164,7 +190,7 @@ if [ -n "$SYNC_PID" ]; then
     az storage blob upload-batch \
         --account-name "$BUILDTEAM_BLOB_ACCOUNT" \
         --destination "${BLOB_LOGS_CONTAINER}" \
-        --destination-path "logs/" \
+        --destination-path "${BLOB_LOGS_PREFIX}/" \
         --source "${LOGS_DIR}" \
         --auth-mode login \
         --overwrite \

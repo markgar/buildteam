@@ -3,10 +3,10 @@ set -e
 
 # --- Docker daemon ---
 # If the host Docker socket is mounted, use it directly.
-# Otherwise start our own daemon (DinD) — needed in ACI where there's no host socket.
+# If dockerd is available, start DinD. Otherwise skip (ACI has no Docker).
 if [ -S /var/run/docker.sock ]; then
     echo "✓ Using host Docker socket"
-else
+elif command -v dockerd &>/dev/null; then
     echo "Starting dockerd (DinD)..."
     dockerd &
     DOCKERD_PID=$!
@@ -17,6 +17,8 @@ else
         fi
         sleep 1
     done
+else
+    echo "⚠ No Docker socket or daemon — validator agent will be skipped"
 fi
 
 # --- Key Vault: fetch GitHub token ---

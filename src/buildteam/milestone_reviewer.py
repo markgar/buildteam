@@ -16,7 +16,7 @@ from buildteam.milestone import (
 )
 from buildteam.prompts import REVIEWER_MILESTONE_PROMPT
 from buildteam.sentinel import is_builder_done
-from buildteam.utils import log, resolve_logs_dir, run_cmd, run_copilot
+from buildteam.utils import emit_event, log, resolve_logs_dir, run_cmd, run_copilot
 
 
 def find_unreviewed_milestones(boundaries: list[dict], reviewed: set[str]) -> list[dict]:
@@ -50,6 +50,7 @@ def _review_milestone(boundary: dict) -> None:
         f"[{now}] Milestone completed: {boundary['name']}! Running cross-cutting review...",
         style="bold magenta",
     )
+    emit_event("milestone-reviewer", "milestone_review_started", milestone=boundary["name"])
 
     run_cmd(["git", "pull", "--rebase", "-q"], quiet=True)
 
@@ -88,6 +89,7 @@ def _review_milestone(boundary: dict) -> None:
         f"[{now}] Milestone review complete: {boundary['name']}",
         style="bold magenta",
     )
+    emit_event("milestone-reviewer", "milestone_review_completed", milestone=boundary["name"])
 
 
 def register(app: typer.Typer) -> None:

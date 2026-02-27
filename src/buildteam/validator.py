@@ -30,7 +30,7 @@ from buildteam.prompts import (
     VALIDATOR_PLAYWRIGHT_TRACE_SECTION,
 )
 from buildteam.sentinel import is_builder_done
-from buildteam.utils import log, run_cmd, run_copilot, resolve_logs_dir
+from buildteam.utils import emit_event, log, run_cmd, run_copilot, resolve_logs_dir
 
 
 _VALIDATOR_MILESTONE_CHECKPOINT = "validator.milestone"
@@ -197,12 +197,14 @@ def _copy_validation_results(milestone_name: str) -> None:
         pass
 
 
-def _print_validation_summary(milestone_name: str) -> None:
+def _print_validation_summary(milestone_name: str) -> tuple[int, int]:
     """Log a pass/fail summary from the validation results file.
 
     Reads logs/validation-<milestone>.txt, counts PASS/FAIL per category
     tag ([A], [B], [C], [UI], other), and logs a summary table plus up to
     10 individual failure lines. Always called after _copy_validation_results.
+
+    Returns (total_pass, total_fail) counts.
     """
     try:
         logs_dir = resolve_logs_dir()
@@ -210,12 +212,12 @@ def _print_validation_summary(milestone_name: str) -> None:
         results_path = os.path.join(logs_dir, f"validation-{safe_name}.txt")
         if not os.path.exists(results_path):
             log("validator", "No validation results file found — skipping summary", style="yellow")
-            return
+            return 0, 0
 
         lines = open(results_path, encoding="utf-8").read().strip().splitlines()
         if not lines:
             log("validator", "Validation results file is empty", style="yellow")
-            return
+            return 0, 0
 
         categories = {"[A]": "Milestone tests", "[B]": "Requirements coverage",
                       "[C]": "Bug verification", "[UI]": "Playwright UI"}
@@ -279,8 +281,10 @@ def _print_validation_summary(milestone_name: str) -> None:
                 log("validator", f"    {fail_line}", style="red")
             if len(failures) > 10:
                 log("validator", f"    ... and {len(failures) - 10} more", style="red")
+        return total_pass, total_fail
     except Exception as exc:
         log("validator", f"Could not print validation summary: {exc}", style="yellow")
+        return 0, 0
 
 
 def _copy_playwright_traces(milestone_name: str) -> None:
@@ -378,6 +382,7 @@ def _validate_milestone(boundary: dict, project_name: str, save_traces: bool = F
         "Building container and validating...",
         style="bold cyan",
     )
+    emit_event("validator", "validation_started", milestone=boundary["name"])
 
     app_port, secondary_port = compute_project_ports(project_name)
     compose_name = project_name.lower().replace(" ", "-")
@@ -410,7 +415,7 @@ def _validate_milestone(boundary: dict, project_name: str, save_traces: bool = F
     exit_code = run_copilot("validator", prompt)
 
     _copy_validation_results(boundary["name"])
-    _print_validation_summary(boundary["name"])
+    total_pass, total_fail = _print_validation_summary(boundary["name"])
     if save_traces:
         _copy_playwright_traces(boundary["name"])
     # Containers are intentionally left running for live browsing.
@@ -446,6 +451,8 @@ def _validate_milestone(boundary: dict, project_name: str, save_traces: bool = F
             f"  App running at http://localhost:{app_port}",
             style="bold green",
         )
+    emit_event("validator", "validation_completed", milestone=boundary["name"],
+              exit_code=exit_code, total_pass=total_pass, total_fail=total_fail)
 
     save_milestone_checkpoint(
         boundary["name"],

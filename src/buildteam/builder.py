@@ -36,6 +36,7 @@ from buildteam.sentinel import (
 from buildteam.utils import (
     count_open_bug_issues,
     count_open_finding_issues,
+    emit_event,
     ensure_milestone_label_exists,
     log,
     run_cmd,
@@ -564,6 +565,7 @@ def _run_issue_builder_loop(
             log(agent_name, "[Issue Builder] All milestone builders done, no open issues. "
                 "Shutting down.", style="bold green")
             write_builder_done(builder_id)
+            emit_event(agent_name, "builder_done", builder_id=builder_id, role="issue")
             return
 
         # Milestone builders still working, nothing to fix yet — wait
@@ -636,6 +638,7 @@ def build(
         log(agent_name, "")
         log(agent_name, f"[Builder] Starting work on {milestone_file}...", style="green")
         log(agent_name, "")
+        emit_event(agent_name, "milestone_started", milestone=milestone_file, builder_id=builder_id)
 
         prompt = BUILDER_PROMPT.format(
             milestone_file=milestone_file,
@@ -645,6 +648,7 @@ def build(
         if exit_code != 0:
             log(agent_name, "Builder failed! Check errors above.", style="bold red")
         write_builder_done(builder_id)
+        emit_event(agent_name, "builder_done", builder_id=builder_id)
         return
 
     # Milestone builders with a dedicated issue builder skip inline issue fixing.
@@ -692,16 +696,19 @@ def build(
             if has_issue_builder:
                 # Issue builder handles remaining work — just exit
                 write_builder_done(builder_id)
+                emit_event(agent_name, "builder_done", builder_id=builder_id)
                 return
             signal = _check_remaining_work(state, agent_name, milestone_file, builder_id, num_builders)
             if signal == "done":
                 write_builder_done(builder_id)
+                emit_event(agent_name, "builder_done", builder_id=builder_id)
                 return
             # Still work to do -- run fix-only cycles
             while True:
                 action = _run_fix_only_cycle(state, agent_name, milestone_file, builder_id, num_builders)
                 if action in ("done", "limit"):
                     write_builder_done(builder_id)
+                    emit_event(agent_name, "builder_done", builder_id=builder_id)
                     return
 
         # Plan: expand this story into a milestone file
@@ -748,6 +755,7 @@ def build(
             log(agent_name, "")
             log(agent_name, f"[Builder] Starting work on {milestone_file}...", style="green")
             log(agent_name, "")
+            emit_event(agent_name, "milestone_started", milestone=milestone_basename, builder_id=builder_id)
 
             prompt = BUILDER_PROMPT.format(
                 milestone_file=milestone_file,
@@ -782,6 +790,7 @@ def build(
             log(agent_name, "======================================", style="bold cyan")
             log(agent_name, " Milestone complete!", style="bold cyan")
             log(agent_name, "======================================", style="bold cyan")
+            emit_event(agent_name, "milestone_completed", milestone=milestone_basename, builder_id=builder_id)
 
         if build_failed:
             ensure_on_main(agent_name)

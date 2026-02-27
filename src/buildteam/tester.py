@@ -15,7 +15,7 @@ from buildteam.milestone import (
 )
 from buildteam.prompts import TESTER_MILESTONE_PROMPT
 from buildteam.sentinel import is_builder_done
-from buildteam.utils import log, run_cmd, run_copilot
+from buildteam.utils import emit_event, log, run_cmd, run_copilot
 
 
 _TESTER_MILESTONE_CHECKPOINT = "tester.milestone"
@@ -37,6 +37,7 @@ def _test_milestone(boundary: dict) -> None:
         f"[{now}] Milestone completed: {boundary['name']}! Running scoped tests...",
         style="bold cyan",
     )
+    emit_event("tester", "testing_started", milestone=boundary["name"])
 
     run_cmd(["git", "pull", "--rebase", "-q"], quiet=True)
 
@@ -54,6 +55,7 @@ def _test_milestone(boundary: dict) -> None:
         log("tester", f"[{now}] WARNING: Test run exited with errors", style="red")
     else:
         log("tester", f"[{now}] Milestone test complete: {boundary['name']}", style="yellow")
+    emit_event("tester", "testing_completed", milestone=boundary["name"], exit_code=exit_code)
 
     save_milestone_checkpoint(
         boundary["name"],

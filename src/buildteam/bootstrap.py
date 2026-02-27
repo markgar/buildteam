@@ -1,6 +1,7 @@
 """Bootstrap command: scaffold a new project repo and clone reviewer/tester copies."""
 
 import os
+import subprocess
 from typing import Annotated
 
 import typer
@@ -76,7 +77,6 @@ def _check_required_tools() -> bool:
         ("git", "brew install git", "winget install Git.Git", "sudo apt install git"),
         ("gh", "brew install gh", "winget install GitHub.cli", "sudo apt install gh"),
         ("docker", "brew install --cask docker", "winget install Docker.DockerDesktop", "sudo apt install docker.io"),
-        ("copilot", None, None, None),
     ]
     for tool, install_mac, install_win, install_linux in tools:
         if not check_command(tool):
@@ -92,6 +92,29 @@ def _check_required_tools() -> bool:
             console.print("Then close and reopen your terminal.", style="yellow")
             return False
         console.print(f"✓ {tool:<8} - OK", style="green")
+
+    # Copilot: check standalone binary first, then fall back to gh built-in
+    if check_command("copilot"):
+        console.print("✓ copilot  - OK", style="green")
+    else:
+        # gh >= 2.87 ships copilot as a built-in subcommand that
+        # auto-downloads the CLI binary on first real invocation.
+        # 'gh copilot --version' misleadingly returns non-zero, but
+        # 'gh help copilot' succeeds when the subcommand exists.
+        try:
+            result = subprocess.run(
+                ["gh", "help", "copilot"],
+                capture_output=True, timeout=10,
+            )
+            if result.returncode == 0:
+                console.print("✓ copilot  - OK (gh built-in)", style="green")
+            else:
+                console.print("ERROR: copilot is not installed (tried 'copilot' and 'gh copilot').", style="bold red")
+                return False
+        except (FileNotFoundError, subprocess.TimeoutExpired):
+            console.print("ERROR: copilot is not installed.", style="bold red")
+            return False
+
     return True
 
 

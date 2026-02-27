@@ -1,5 +1,7 @@
 # Copilot Instructions
 
+**Repository:** [markgar/buildteam](https://github.com/markgar/buildteam)
+
 ## About this codebase
 
 This software is entirely written by GitHub Copilot. The code is structured to be readable, modifiable, and extendable by Copilot (and other LLM-based agents). Every design decision should reinforce that.

@@ -158,3 +158,5 @@ The system is designed around cumulative knowledge — each milestone makes subs
 See [AGENTS.md](AGENTS.md) for the exact prompts each agent receives and coordination rules.
 
 See [USAGE.md](USAGE.md) for the full command reference, logging, troubleshooting, and more.
+
+See [docs/docker.md](docs/docker.md) for running in a Docker container (headless, CI, or server environments).

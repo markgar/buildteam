@@ -6,7 +6,24 @@ import subprocess
 import sys
 import tempfile
 
-from buildteam.utils import check_command, console, is_macos, is_windows
+from buildteam.utils import check_command, console, is_container, is_macos, is_windows
+
+
+def _is_headless() -> bool:
+    """Detect if we're in a headless environment (no desktop, container, etc.).
+
+    Returns True when there's no graphical terminal available — either because
+    we're inside a container or because there's no DISPLAY/TERM_PROGRAM set.
+    """
+    if is_container():
+        return True
+    if os.environ.get("BUILDTEAM_HEADLESS", "").lower() in ("1", "true", "yes"):
+        return True
+    # On macOS/Windows, the desktop is always available if we got this far.
+    if is_macos() or is_windows():
+        return False
+    # On Linux, check for DISPLAY (X11) or WAYLAND_DISPLAY
+    return not os.environ.get("DISPLAY") and not os.environ.get("WAYLAND_DISPLAY")
 
 
 def build_agent_script(working_dir: str, command: str, platform: str, model: str = "") -> str:
@@ -97,15 +114,47 @@ def _spawn_linux(working_dir: str, command: str, model: str = "") -> None:
         )
 
 
+def _spawn_headless(working_dir: str, command: str, model: str = "") -> None:
+    """Spawn agent as a background subprocess (no terminal window).
+
+    Used in containers and other headless environments where there's no
+    desktop to open a terminal window in. Output goes to logs/*.log only.
+    """
+    script_content = build_agent_script(working_dir, command, "linux", model=model)
+    fd, temp_script = tempfile.mkstemp(suffix=".sh")
+    with os.fdopen(fd, "w") as f:
+        f.write(script_content)
+    os.chmod(temp_script, 0o755)
+
+    # Open log file for stdout/stderr so output isn't lost
+    logs_dir = os.path.join(os.path.dirname(working_dir), "logs")
+    os.makedirs(logs_dir, exist_ok=True)
+    agent_name = os.path.basename(working_dir)
+    log_path = os.path.join(logs_dir, f"{agent_name}-spawn.log")
+    log_fh = open(log_path, "a", encoding="utf-8")
+
+    subprocess.Popen(
+        ["bash", temp_script],
+        stdout=log_fh,
+        stderr=log_fh,
+        start_new_session=True,  # detach from parent
+    )
+
+
 def spawn_agent_in_terminal(working_dir: str, command: str, model: str = "") -> None:
-    """Launch an agent command in a new terminal window.
+    """Launch an agent command in a new terminal window (or background process if headless).
 
     When *model* is provided the child terminal's COPILOT_MODEL is set to
     that value, overriding the parent environment.  When omitted the parent
     environment value is inherited as before.
+
+    In headless mode (container, no DISPLAY, or BUILDTEAM_HEADLESS=1), spawns
+    a background subprocess instead of opening a terminal window.
     """
     try:
-        if is_macos():
+        if _is_headless():
+            _spawn_headless(working_dir, command, model=model)
+        elif is_macos():
             _spawn_macos(working_dir, command, model=model)
         elif is_windows():
             _spawn_windows(working_dir, command, model=model)

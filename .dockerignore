@@ -1,0 +1,13 @@
+.git
+__pycache__
+*.pyc
+*.egg-info
+build/
+dist/
+.pytest_cache
+tests/harness/runs/
+logs/
+*.egg
+.venv
+venv
+node_modules

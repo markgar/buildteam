@@ -17,7 +17,7 @@ from buildteam.prompts import (
 )
 from buildteam.sentinel import clear_builder_done, is_builder_done
 from buildteam.terminal import spawn_agent_in_terminal
-from buildteam.utils import console, ensure_bug_label_exists, ensure_review_labels_exist, log, pushd, run_cmd, run_copilot, validate_model
+from buildteam.utils import console, emit_event, ensure_bug_label_exists, ensure_review_labels_exist, is_container, log, pushd, run_cmd, run_copilot, validate_model
 
 
 # Per-agent model map. Keys are agent roles, values are Copilot CLI model names.
@@ -311,6 +311,7 @@ def _launch_agents_and_build(
     log("orchestrator", " All agents launched!", style="bold green")
     log("orchestrator", "======================================", style="bold green")
     log("orchestrator", "")
+    emit_event("orchestrator", "agents_launched", num_builders=num_builders)
 
     _wait_for_builders()
 
@@ -323,6 +324,7 @@ def _wait_for_builders() -> None:
             log("orchestrator", "======================================", style="bold green")
             log("orchestrator", " All builders done. Run complete.", style="bold green")
             log("orchestrator", "======================================", style="bold green")
+            emit_event("orchestrator", "run_complete")
             return
         time.sleep(15)
 
@@ -455,6 +457,7 @@ def go(
     validator_model: Annotated[str, typer.Option(help="Model override for the validator agent")] = None,
     planner_model: Annotated[str, typer.Option(help="Model override for the planner (initial plan + copilot-instructions)")] = None,
     backlog_model: Annotated[str, typer.Option(help="Model override for initial backlog creation only (falls back to --planner-model)")] = None,
+    headless: Annotated[bool, typer.Option(help="Run all agents as background processes instead of terminal windows (auto-detected in containers)")] = False,
 ) -> None:
     """Start or continue a project. Detects whether the project already exists.
 
@@ -464,11 +467,17 @@ def go(
     --directory is the project working directory — relative or absolute.
     --name optionally overrides the GitHub repo name (defaults to basename of directory).
     --builders controls how many parallel builder agents are launched (default 1).
+    --headless runs all agents as headless background processes (auto-enabled inside containers).
 
     Per-agent model overrides (all optional, default to --model):
       --builder-model, --reviewer-model, --milestone-reviewer-model,
       --tester-model, --validator-model, --planner-model
     """
+    # Auto-detect headless mode inside containers
+    if headless or is_container():
+        os.environ["BUILDTEAM_HEADLESS"] = "1"
+        console.print("Headless mode: agents will run as background processes", style="cyan")
+
     default_model = validate_model(model)
     os.environ["COPILOT_MODEL"] = default_model
 

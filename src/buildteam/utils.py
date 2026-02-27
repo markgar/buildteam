@@ -9,7 +9,9 @@ import sys
 import threading
 import time
 from collections.abc import Generator
-from datetime import datetime
+from datetime import datetime, timezone
+
+import json as _json
 
 from rich.console import Console
 
@@ -46,7 +48,15 @@ def find_project_root(cwd: str) -> str:
 
 
 def resolve_logs_dir() -> str:
-    """Find the project root logs directory, creating it if needed."""
+    """Find the project root logs directory, creating it if needed.
+
+    When BUILDTEAM_LOGS_DIR is set (e.g. in a container), uses that path
+    directly. Otherwise falls back to the cwd-based project root.
+    """
+    override = os.environ.get("BUILDTEAM_LOGS_DIR")
+    if override:
+        os.makedirs(override, exist_ok=True)
+        return override
     project_root = find_project_root(os.getcwd())
     logs_dir = os.path.join(project_root, "logs")
     os.makedirs(logs_dir, exist_ok=True)
@@ -154,6 +164,11 @@ def _resolve_copilot_cmd() -> list[str]:
         exe = shutil.which("copilot")
         if exe:
             return [exe]
+    # Fallback: gh ships copilot as a built-in subcommand (gh >= 2.87).
+    # 'gh copilot' auto-downloads the CLI binary on first invocation.
+    gh = shutil.which("gh")
+    if gh:
+        return [gh, "copilot"]
     return ["copilot"]
 
 
@@ -334,6 +349,46 @@ def is_macos() -> bool:
 
 def is_windows() -> bool:
     return sys.platform == "win32"
+
+
+def is_container() -> bool:
+    """Detect if we're running inside a container (Docker, Podman, etc.)."""
+    return os.path.exists("/.dockerenv") or os.path.exists("/run/.containerenv")
+
+
+def emit_event(agent: str, event: str, **kwargs) -> None:
+    """Write a structured JSONL event to logs/events.jsonl and stdout.
+
+    Events are machine-readable records of key orchestration milestones.
+    Each line is a self-contained JSON object with at least 'ts', 'agent',
+    and 'event' fields. Additional keyword arguments are included as-is.
+
+    In interactive mode this is a no-op supplement to the existing log()
+    calls — the JSONL file is there for external consumers, not humans.
+    """
+    record = {
+        "ts": datetime.now(timezone.utc).isoformat(),
+        "agent": agent,
+        "event": event,
+        **kwargs,
+    }
+    line = _json.dumps(record, default=str)
+
+    # Write to stdout for docker logs / ACI log capture
+    try:
+        sys.stdout.write(line + "\n")
+        sys.stdout.flush()
+    except Exception:
+        pass
+
+    # Append to logs/events.jsonl
+    try:
+        logs_dir = resolve_logs_dir()
+        events_file = os.path.join(logs_dir, "events.jsonl")
+        with open(events_file, "a", encoding="utf-8") as f:
+            f.write(line + "\n")
+    except Exception:
+        pass  # Never break the workflow over event logging
 
 
 def check_command(name: str) -> bool:

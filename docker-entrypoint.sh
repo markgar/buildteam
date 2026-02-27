@@ -20,6 +20,32 @@ else
 fi
 
 # --- Key Vault: fetch GitHub token ---
+# --- Managed identity login ---
+# When BUILDTEAM_UAMI_CLIENT_ID is set, az login targets that specific user-assigned
+# managed identity. Without it, az login --identity uses the system-assigned identity
+# (which doesn't exist on ACI with UAMI-only). Call this early so Key Vault and blob
+# operations both use it.
+#   BUILDTEAM_UAMI_CLIENT_ID  - client ID of the user-assigned managed identity
+if [ -n "${BUILDTEAM_UAMI_CLIENT_ID:-}" ] || [ -n "${BUILDTEAM_KEYVAULT:-}" ] || [ -n "${BUILDTEAM_BLOB_ACCOUNT:-}" ]; then
+    az account show -o none 2>/dev/null || {
+        if [ -n "${BUILDTEAM_UAMI_CLIENT_ID:-}" ]; then
+            echo "Logging in with managed identity (client ID: ${BUILDTEAM_UAMI_CLIENT_ID})..."
+            az login --identity --username "$BUILDTEAM_UAMI_CLIENT_ID" --allow-no-subscriptions -o none 2>/dev/null || {
+                echo "✗ az login --identity failed"
+                exit 1
+            }
+        else
+            echo "Logging in with managed identity..."
+            az login --identity --allow-no-subscriptions -o none 2>/dev/null || {
+                echo "✗ az login --identity failed"
+                exit 1
+            }
+        fi
+        echo "✓ Logged in with managed identity"
+    }
+fi
+
+# --- Key Vault: fetch GitHub token ---
 # When BUILDTEAM_KEYVAULT is set, retrieve the GitHub PAT from Key Vault using
 # managed identity. This is more secure than passing GITHUB_TOKEN as an env var
 # (which is visible in the Azure portal and ARM API).
@@ -28,15 +54,6 @@ fi
 if [ -n "${BUILDTEAM_KEYVAULT:-}" ]; then
     KV_SECRET="${BUILDTEAM_KEYVAULT_SECRET:-github-token}"
     echo "Fetching GitHub token from Key Vault: ${BUILDTEAM_KEYVAULT}/${KV_SECRET}"
-
-    # Login with managed identity if not already logged in
-    az account show -o none 2>/dev/null || {
-        echo "Logging in with managed identity for Key Vault access..."
-        az login --identity --allow-no-subscriptions -o none 2>/dev/null || {
-            echo "✗ az login --identity failed — cannot access Key Vault"
-            exit 1
-        }
-    }
 
     GITHUB_TOKEN=$(az keyvault secret show \
         --vault-name "$BUILDTEAM_KEYVAULT" \
@@ -96,14 +113,6 @@ if [ -n "${BUILDTEAM_BLOB_ACCOUNT:-}" ]; then
     BLOB_SPEC="${BUILDTEAM_BLOB_SPEC:-spec.md}"
     SPEC_DEST="${BUILDTEAM_SPEC_DEST:-/workspace/data/spec.md}"
     BLOB_LOGS_CONTAINER="${BUILDTEAM_BLOB_LOGS_CONTAINER:-$BLOB_CONTAINER}"
-
-    # Login using managed identity for az CLI blob operations (skip if already logged in via Key Vault)
-    az account show -o none 2>/dev/null || {
-        echo "Logging in with managed identity..."
-        az login --identity --allow-no-subscriptions -o none 2>/dev/null || {
-            echo "⚠ az login --identity failed — blob sync will not work"
-        }
-    }
 
     # Download spec
     mkdir -p "$(dirname "$SPEC_DEST")"

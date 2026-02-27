@@ -41,9 +41,17 @@ az ad app federated-credential create --id "${APP_ID}" --parameters '{
   "description": "GitHub Actions push to main and workflow_dispatch"
 }'
 
+SP_OBJECT_ID=$(az ad sp show --id "${APP_ID}" --query id -o tsv)
+
+echo "==> Granting Reader on subscription (required for az login to discover the sub)"
+az role assignment create \
+  --assignee-object-id "${SP_OBJECT_ID}" \
+  --assignee-principal-type ServicePrincipal \
+  --role Reader \
+  --scope "/subscriptions/${AZURE_SUBSCRIPTION_ID}"
+
 echo "==> Granting AcrPush role on ACR: ${ACR_NAME}"
 ACR_ID=$(az acr show --name "${ACR_NAME}" --query id -o tsv)
-SP_OBJECT_ID=$(az ad sp show --id "${APP_ID}" --query id -o tsv)
 az role assignment create \
   --assignee-object-id "${SP_OBJECT_ID}" \
   --assignee-principal-type ServicePrincipal \

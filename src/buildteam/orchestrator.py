@@ -16,7 +16,7 @@ from buildteam.prompts import (
     COPILOT_INSTRUCTIONS_PROMPT,
     COPILOT_INSTRUCTIONS_TEMPLATE,
 )
-from buildteam.sentinel import clear_builder_done, is_builder_done
+from buildteam.sentinel import clear_builder_done, get_builder_status_summary, is_builder_done
 from buildteam.terminal import spawn_agent_in_terminal
 from buildteam.utils import console, emit_event, ensure_bug_label_exists, ensure_review_labels_exist, is_container, log, pushd, run_cmd, run_copilot, validate_model
 
@@ -362,6 +362,7 @@ def _launch_agents_and_build(
 
 def _wait_for_builders() -> None:
     """Block until all builders have finished (or stale-log timeout)."""
+    poll_count = 0
     while True:
         if is_builder_done():
             log("orchestrator", "")
@@ -370,6 +371,12 @@ def _wait_for_builders() -> None:
             log("orchestrator", "======================================", style="bold green")
             emit_event("orchestrator", "run_complete")
             return
+        poll_count += 1
+        # Log status every ~60 seconds (every 4th poll at 15s intervals)
+        if poll_count % 4 == 0:
+            status = get_builder_status_summary()
+            if status:
+                log("orchestrator", f"Waiting for builders... {status}", style="dim")
         time.sleep(15)
 
 

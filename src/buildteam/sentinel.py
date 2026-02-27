@@ -155,6 +155,51 @@ def is_builder_done() -> bool:
     return False
 
 
+def get_builder_status_summary() -> str:
+    """Return a human-readable summary of builder states.
+
+    Example: 'builder-1: done | builder-2: active (2m ago)'
+    Returns empty string if no builder logs found.
+    """
+    try:
+        logs_dir = resolve_logs_dir()
+        now = datetime.now().timestamp()
+        all_files = os.listdir(logs_dir)
+        builder_ids: list[int] = []
+        builder_dones: set[int] = set()
+        log_ages: dict[int, float] = {}
+
+        for fname in all_files:
+            m = _BUILDER_ID_RE.match(fname)
+            if m:
+                bid = int(m.group(1))
+                if m.group(2) == "log":
+                    builder_ids.append(bid)
+                    path = os.path.join(logs_dir, fname)
+                    mtime = os.path.getmtime(path)
+                    log_ages[bid] = (now - mtime) / 60
+                elif m.group(2) == "done":
+                    builder_dones.add(bid)
+
+        if not builder_ids:
+            return ""
+
+        parts = []
+        for bid in sorted(builder_ids):
+            if bid in builder_dones:
+                parts.append(f"builder-{bid}: done")
+            else:
+                age = log_ages.get(bid, 0.0)
+                if age < 1:
+                    age_str = f"{int(age * 60)}s ago"
+                else:
+                    age_str = f"{int(age)}m ago"
+                parts.append(f"builder-{bid}: active ({age_str})")
+        return " | ".join(parts)
+    except Exception:
+        return ""
+
+
 def save_reviewer_checkpoint(sha: str, builder_id: int = 1) -> None:
     """Persist the last-reviewed commit SHA so the reviewer never loses its place.
 

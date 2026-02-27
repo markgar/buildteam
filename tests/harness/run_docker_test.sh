@@ -5,7 +5,7 @@
 # Usage:
 #   ./tests/harness/run_docker_test.sh --name cli-calculator --model claude-sonnet-4.6
 #   ./tests/harness/run_docker_test.sh --name cli-calculator --model claude-sonnet-4.6 \
-#       --spec-file tests/harness/sample_spec_cli_calculator.md
+#       --spec-file tests/harness/full/sample_spec_stretto.md
 #   ./tests/harness/run_docker_test.sh --name cli-calculator --model claude-sonnet-4.6 --builders 2
 #
 # Creates a timestamped run directory under tests/harness/runs/<timestamp>/
@@ -58,16 +58,29 @@ if [[ "$BUILDERS" -lt 2 || "$BUILDERS" -gt 8 ]]; then
 fi
 
 if [[ -z "${GITHUB_TOKEN:-}" ]]; then
-    echo "ERROR: GITHUB_TOKEN is not set"
-    echo "  export GITHUB_TOKEN=\$(gh auth token)"
-    exit 1
+    # Try to get token from gh CLI
+    if command -v gh &>/dev/null; then
+        export GITHUB_TOKEN="$(gh auth token 2>/dev/null)"
+    fi
+    if [[ -z "${GITHUB_TOKEN:-}" ]]; then
+        echo "ERROR: GITHUB_TOKEN is not set and gh auth token failed"
+        echo "  export GITHUB_TOKEN=\$(gh auth token)"
+        exit 1
+    fi
+    echo "GITHUB_TOKEN set from gh auth token"
 fi
 
-# Default spec: use the sample spec matching the project name, or cli-calculator
+# Default spec: search simple/ and full/ subdirectories for a matching spec
 if [[ -z "$SPEC_FILE" ]]; then
-    SPEC_FILE="$SCRIPT_DIR/sample_spec_${NAME//-/_}.md"
-    if [[ ! -f "$SPEC_FILE" ]]; then
-        SPEC_FILE="$SCRIPT_DIR/sample_spec_cli_calculator.md"
+    SPEC_NAME="sample_spec_${NAME//-/_}.md"
+    for subdir in simple full; do
+        if [[ -f "$SCRIPT_DIR/$subdir/$SPEC_NAME" ]]; then
+            SPEC_FILE="$SCRIPT_DIR/$subdir/$SPEC_NAME"
+            break
+        fi
+    done
+    if [[ -z "$SPEC_FILE" ]]; then
+        SPEC_FILE="$SCRIPT_DIR/simple/sample_spec_minimal_python_api.md"
     fi
 fi
 
@@ -138,7 +151,14 @@ echo "  Repo name:   $REPO_NAME"
 echo "  Logs will be at: $RUN_DIR/logs/"
 echo ""
 
-docker run --rm --privileged \
+# Run docker and capture output to log file while also displaying it.
+# IMPORTANT: We avoid `docker run ... | tee` because if tee dies or the pipe
+# breaks, docker receives SIGPIPE and kills the container — terminating all
+# agents mid-work. Instead, write directly to the log file via process
+# substitution and tee from there. This way docker's exit is never affected
+# by downstream pipe issues.
+docker run --rm \
+    -v /var/run/docker.sock:/var/run/docker.sock \
     -v "$RUN_DIR:/workspace/data" \
     -e GITHUB_TOKEN="$GITHUB_TOKEN" \
     -e BUILDTEAM_LOGS_DIR=/workspace/data/logs \
@@ -146,9 +166,9 @@ docker run --rm --privileged \
     "$IMAGE" \
     go --directory "/workspace/$REPO_NAME" --model "$MODEL" \
        --spec-file /workspace/data/spec.md --headless --builders "$BUILDERS" \
-    2>&1 | tee "$RUN_DIR/logs/docker-output.log"
+    > >(tee "$RUN_DIR/logs/docker-output.log") 2>&1
 
-EXIT_CODE=${PIPESTATUS[0]}
+EXIT_CODE=$?
 
 # Persist exit code and completion timestamp into logs/ for headless analysis
 echo "$EXIT_CODE" > "$RUN_DIR/logs/exit-code"

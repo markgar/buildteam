@@ -1,20 +1,23 @@
 #!/bin/bash
 set -e
 
-# --- Start Docker daemon (DinD) ---
-# The validator agent needs docker compose to build/test the target project.
-# In ACI there's no host socket, so we run our own daemon.
-dockerd &
-DOCKERD_PID=$!
-
-# Wait for daemon to be ready
-for i in $(seq 1 30); do
-    if docker info &>/dev/null; then
-        echo "✓ dockerd ready"
-        break
-    fi
-    sleep 1
-done
+# --- Docker daemon ---
+# If the host Docker socket is mounted, use it directly.
+# Otherwise start our own daemon (DinD) — needed in ACI where there's no host socket.
+if [ -S /var/run/docker.sock ]; then
+    echo "✓ Using host Docker socket"
+else
+    echo "Starting dockerd (DinD)..."
+    dockerd &
+    DOCKERD_PID=$!
+    for i in $(seq 1 30); do
+        if docker info &>/dev/null; then
+            echo "✓ dockerd ready"
+            break
+        fi
+        sleep 1
+    done
+fi
 
 # --- Authenticate gh CLI and copilot CLI ---
 # gh uses GITHUB_TOKEN env var directly — no 'gh auth login' needed.

@@ -10,6 +10,7 @@ The API provides CRUD operations for blob containers within an Azure Storage acc
 
 - .NET 10 minimal API (`dotnet new web`)
 - `Azure.Storage.Blobs` NuGet package
+- `Azure.Identity` NuGet package (for `DefaultAzureCredential`)
 - No authentication required on the API endpoints
 - No relational database — Azure Blob Storage is the only data store
 
@@ -19,52 +20,53 @@ This application requires an Azure Blob Storage-compatible service.
 
 ### Environment Variables
 
-| Variable | Description | Required |
+| Variable | Description | When to use |
 |---|---|---|
-| `AZURE_STORAGE_CONNECTION_STRING` | Connection string for the storage backend | Yes |
+| `AZURE_STORAGE_ACCOUNT_URL` | Storage account URL, e.g. `https://myaccount.blob.core.windows.net` | Production (Managed Identity) |
+| `AZURE_STORAGE_CONNECTION_STRING` | Connection string for the storage backend | Local dev / Azurite |
 
-If `AZURE_STORAGE_CONNECTION_STRING` is not set, the application must fail to start with a clear error message.
+At least one must be set. If both are set, `AZURE_STORAGE_ACCOUNT_URL` takes precedence.
+
+### Storage Client Initialization
+
+The app selects its authentication strategy at startup based on which environment variable is present:
+
+- **`AZURE_STORAGE_ACCOUNT_URL` is set** — use `new BlobServiceClient(new Uri(url), new DefaultAzureCredential())`. In Azure, this picks up Managed Identity automatically. Locally, it uses `az login` credentials.
+- **`AZURE_STORAGE_CONNECTION_STRING` is set** — use `new BlobServiceClient(connectionString)`. This is the path used with Azurite.
+- **Neither is set** — fail to start with a clear error message.
+
+No environment detection logic — the deployer controls behavior through configuration.
 
 ### Local Development & Validation (Azurite)
 
 For development, testing, and CI validation, use **Azurite** as a drop-in Azure Storage emulator. Azurite supports the full Blob, Queue, and Table Storage APIs.
 
 **Docker image:** `mcr.microsoft.com/azure-storage/azurite`
-**Ports:** Blob service on `10000`, Queue on `10001`, Table on `10002`
+**npm package:** `azurite` (can also be installed via `npm install -g azurite`)
+**Default ports:** Blob `10000`, Queue `10001`, Table `10002`
 
-In docker-compose, add Azurite as a sidecar service:
-```yaml
-services:
-  azurite:
-    image: mcr.microsoft.com/azure-storage/azurite
-    ports:
-      - "10000:10000"
-    command: "azurite-blob --blobHost 0.0.0.0"
-    healthcheck:
-      test: ["CMD", "nc", "-z", "127.0.0.1", "10000"]
-      interval: 2s
-      timeout: 3s
-      retries: 5
+**Well-known Azurite connection string:**
+```
+DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tiqnZwA==;BlobEndpoint=http://localhost:10000/devstoreaccount1;
 ```
 
-Pass the Azurite connection string to the app service:
-```yaml
-services:
-  app:
-    environment:
-      AZURE_STORAGE_CONNECTION_STRING: "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tiqnZwA==;BlobEndpoint=http://azurite:10000/devstoreaccount1;"
-    depends_on:
-      azurite:
-        condition: service_healthy
-```
-
-Note: the `BlobEndpoint` uses `azurite` (the docker-compose service name) as the hostname, not `localhost` or `127.0.0.1`.
+Set `AZURE_STORAGE_CONNECTION_STRING` to this value when running against Azurite. Adjust the `BlobEndpoint` hostname if Azurite is running on a different host (e.g. a docker-compose service name).
 
 ## Features
 
 ### Health
 
-- `GET /health` — returns `{ "status": "healthy" }` with HTTP 200
+- `GET /health` — actively checks all external dependencies and returns per-check status
+  - Response when all dependencies are reachable (HTTP 200):
+    ```json
+    { "status": "healthy", "checks": { "storage": "connected" } }
+    ```
+  - Response when any dependency is unreachable (HTTP 503):
+    ```json
+    { "status": "unhealthy", "checks": { "storage": "connection refused" } }
+    ```
+  - The `checks` object must include an entry for every configured external dependency. As new dependencies are added (e.g. Cosmos DB, Redis), they must appear here.
+  - The health check should attempt a lightweight operation (e.g. `BlobServiceClient.GetProperties()`) — not just verify the connection string is non-empty.
 
 ### Container Management
 

@@ -2,7 +2,7 @@
 
 Usage:
     python tests/harness/run_test.py --name stretto --model claude-opus-4.6 \\
-        --spec-file tests/harness/sample_spec_stretto.md
+        --spec-file tests/harness/full/sample_spec_stretto.md
     python tests/harness/run_test.py --name stretto --model claude-opus-4.6 --resume
     python tests/harness/run_test.py --name stretto --model claude-opus-4.6 \\
         --builders 4 --reviewer-model claude-sonnet-4.6
@@ -305,7 +305,7 @@ def run_harness() -> int:
         exit_code = run_command(command)
     else:
         # --- Fresh run ---
-        spec_arg = args.spec_file or str(harness_dir / "sample_spec_cli_calculator.md")
+        spec_arg = args.spec_file or str(harness_dir / "simple" / "sample_spec_minimal_python_api.md")
         spec_file = Path(spec_arg).resolve()
         if not spec_file.exists():
             print(f"ERROR: Spec file not found: {spec_file}")

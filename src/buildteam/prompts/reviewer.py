@@ -132,8 +132,13 @@ REVIEWER_MILESTONE_PROMPT = (
     "appear when viewing the full picture, architectural issues in how the pieces fit "
     "together, dead code — functions, methods, or classes that were added or modified "
     "during the milestone but are never called from any endpoint or entry point, and "
-    "missing edge case handling that would cause runtime failures in production. "
-    "Do NOT re-flag issues already covered by existing open finding issues "
+    "missing edge case handling that would cause runtime failures in production. "    "HEALTH ENDPOINT CONTRACT: If the project has a /health endpoint, verify that "
+    "every external dependency introduced or modified in this milestone (storage "
+    "clients, database connections, caches, message queues, etc.) is actively checked "
+    "by the health endpoint. A milestone that adds a new service client but does not "
+    "add a corresponding health check is a [bug] — the health endpoint must reflect "
+    "the real state of all dependencies, not just return HTTP 200. File a finding if "
+    "the contract is violated. "    "Do NOT re-flag issues already covered by existing open finding issues "
     "(check with `gh issue list --label finding --state open --json number,title --limit 50`). "
     + _REVIEW_CHECKLIST
     + _SEVERITY_RULES

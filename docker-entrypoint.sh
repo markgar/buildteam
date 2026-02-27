@@ -30,7 +30,7 @@ if [ -n "${BUILDTEAM_UAMI_CLIENT_ID:-}" ] || [ -n "${BUILDTEAM_KEYVAULT:-}" ] ||
     az account show -o none 2>/dev/null || {
         if [ -n "${BUILDTEAM_UAMI_CLIENT_ID:-}" ]; then
             echo "Logging in with managed identity (client ID: ${BUILDTEAM_UAMI_CLIENT_ID})..."
-            az login --identity --username "$BUILDTEAM_UAMI_CLIENT_ID" --allow-no-subscriptions -o none || {
+            az login --identity --client-id "$BUILDTEAM_UAMI_CLIENT_ID" --allow-no-subscriptions -o none || {
                 echo "✗ az login --identity failed"
                 exit 1
             }

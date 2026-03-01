@@ -6,6 +6,18 @@ set -e
 # If dockerd is available, start DinD. Otherwise skip (ACI has no Docker).
 if [ -S /var/run/docker.sock ]; then
     echo "✓ Using host Docker socket"
+elif [ -n "${DOCKER_HOST:-}" ]; then
+    echo "DOCKER_HOST is set ($DOCKER_HOST) — waiting for remote Docker daemon..."
+    for i in $(seq 1 30); do
+        if docker info &>/dev/null 2>&1; then
+            echo "✓ Remote Docker daemon ready"
+            break
+        fi
+        sleep 1
+    done
+    if ! docker info &>/dev/null 2>&1; then
+        echo "⚠ Remote Docker daemon at $DOCKER_HOST not reachable after 30s — validator agent will be skipped"
+    fi
 elif command -v dockerd &>/dev/null; then
     echo "Starting dockerd (DinD)..."
     dockerd &

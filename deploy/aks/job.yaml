@@ -67,11 +67,6 @@ spec:
                   key: github-token
             - name: BUILDTEAM_KEYVAULT
               value: ""  # Empty — token comes from K8s secret, not KV at runtime
-            # -- Blob storage for logs (reachable via private endpoint) --
-            - name: BUILDTEAM_BLOB_ACCOUNT
-              value: "stautodevdev"
-            - name: BUILDTEAM_BLOB_CONTAINER
-              value: "specs"
             # -- Docker via DinD sidecar over TCP --
             - name: DOCKER_HOST
               value: "tcp://localhost:2375"

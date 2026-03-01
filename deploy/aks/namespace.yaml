@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: buildteam-sa
+  namespace: default
+  annotations:
+    azure.workload.identity/client-id: "14d79474-03b9-43ea-aab0-6da97deb85f2"
+  labels:
+    azure.workload.identity/use: "true"

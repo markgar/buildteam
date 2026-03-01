@@ -30,7 +30,16 @@ fi
 #   BUILDTEAM_UAMI_CLIENT_ID  - client ID of the user-assigned managed identity
 if [ -n "${BUILDTEAM_UAMI_CLIENT_ID:-}" ] || [ -n "${BUILDTEAM_KEYVAULT:-}" ] || [ -n "${BUILDTEAM_BLOB_ACCOUNT:-}" ]; then
     az account show -o none 2>/dev/null || {
-        if [ -n "${BUILDTEAM_UAMI_CLIENT_ID:-}" ]; then
+        if [ -n "${AZURE_FEDERATED_TOKEN_FILE:-}" ] && [ -n "${AZURE_CLIENT_ID:-}" ]; then
+            # AKS workload identity — use federated token
+            echo "Logging in with workload identity (client ID: ${AZURE_CLIENT_ID})..."
+            az login --federated-token "$(cat "$AZURE_FEDERATED_TOKEN_FILE")" \
+                --service-principal -u "$AZURE_CLIENT_ID" -t "${AZURE_TENANT_ID}" \
+                --allow-no-subscriptions -o none || {
+                echo "✗ az login --federated-token failed"
+                exit 1
+            }
+        elif [ -n "${BUILDTEAM_UAMI_CLIENT_ID:-}" ]; then
             echo "Logging in with managed identity (client ID: ${BUILDTEAM_UAMI_CLIENT_ID})..."
             az login --identity --client-id "$BUILDTEAM_UAMI_CLIENT_ID" --allow-no-subscriptions -o none || {
                 echo "✗ az login --identity failed"

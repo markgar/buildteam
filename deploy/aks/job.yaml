@@ -1,0 +1,112 @@
+# Buildteam AKS Job Template
+#
+# Usage:
+#   1. Replace <SPEC_FILE> with --spec-file or --description args
+#   2. Replace <PROJECT_NAME> with your project directory name
+#   3. Apply: kubectl apply -f deploy/aks/
+#
+# Example:
+#   kubectl apply -f deploy/aks/namespace.yaml -f deploy/aks/secret-provider.yaml
+#   # Edit job.yaml with your project args, then:
+#   kubectl apply -f deploy/aks/job.yaml
+#
+# To monitor:
+#   kubectl logs -f job/buildteam-<PROJECT_NAME>
+#
+# To stop:
+#   kubectl delete job buildteam-<PROJECT_NAME>
+
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: buildteam-minimal-python-api
+  namespace: default
+spec:
+  backoffLimit: 0  # Don't retry on failure
+  ttlSecondsAfterFinished: 86400  # Clean up after 24h
+  template:
+    metadata:
+      labels:
+        azure.workload.identity/use: "true"
+    spec:
+      serviceAccountName: buildteam-sa
+      restartPolicy: Never
+
+      volumes:
+        # Docker data (images, layers) — stored on disk, not memory
+        - name: docker-data
+          emptyDir: {}
+        # CSI volume to sync KV secrets into a K8s secret
+        - name: kv-secrets
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: buildteam-kv-secrets
+        # Spec file from ConfigMap
+        - name: spec
+          configMap:
+            name: buildteam-spec
+
+      containers:
+        # --- Buildteam container ---
+        - name: buildteam
+          image: crautodevdev.azurecr.io/buildteam:latest
+          volumeMounts:
+            - name: kv-secrets
+              mountPath: /mnt/secrets
+              readOnly: true
+            - name: spec
+              mountPath: /workspace/data
+              readOnly: true
+          env:
+            - name: GITHUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: buildteam-secrets
+                  key: github-token
+            - name: BUILDTEAM_KEYVAULT
+              value: ""  # Empty — token comes from K8s secret, not KV at runtime
+            # -- Blob storage for logs (reachable via private endpoint) --
+            - name: BUILDTEAM_BLOB_ACCOUNT
+              value: "stautodevdev"
+            - name: BUILDTEAM_BLOB_CONTAINER
+              value: "specs"
+            # -- Docker via DinD sidecar over TCP --
+            - name: DOCKER_HOST
+              value: "tcp://localhost:2375"
+          # ---- EDIT THESE ARGS FOR YOUR PROJECT ----
+          args:
+            - "go"
+            - "--directory"
+            - "minimal-python-api"
+            - "--model"
+            - "claude-sonnet-4.6"
+            - "--spec-file"
+            - "/workspace/data/spec.md"
+          resources:
+            requests:
+              cpu: "1"
+              memory: "4Gi"
+            limits:
+              cpu: "3"
+              memory: "12Gi"
+
+        # --- Docker-in-Docker sidecar ---
+        - name: dind
+          image: docker:dind
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - name: docker-data
+              mountPath: /var/lib/docker
+          env:
+            - name: DOCKER_TLS_CERTDIR
+              value: ""  # Disable TLS — buildteam connects via tcp://localhost:2375
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "1Gi"
+            limits:
+              cpu: "1"
+              memory: "4Gi"

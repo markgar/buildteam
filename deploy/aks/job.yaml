@@ -51,7 +51,7 @@ spec:
       containers:
         # --- Buildteam container ---
         - name: buildteam
-          image: crautodevdev.azurecr.io/buildteam:latest
+          image: crautodevqqq.azurecr.io/buildteam:latest
           volumeMounts:
             - name: kv-secrets
               mountPath: /mnt/secrets
@@ -67,6 +67,16 @@ spec:
                   key: github-token
             - name: BUILDTEAM_KEYVAULT
               value: ""  # Empty — token comes from K8s secret, not KV at runtime
+            # -- Blob storage for logs (reachable via private endpoint) --
+            - name: BUILDTEAM_BLOB_ACCOUNT
+              value: "stautodevqqq"
+            - name: BUILDTEAM_BLOB_CONTAINER
+              value: "sample-specs"
+            - name: BUILDTEAM_BLOB_SPEC
+              value: "minimal-python-api.md"
+            # -- Logs dir (default /workspace/data/logs is read-only ConfigMap) --
+            - name: BUILDTEAM_LOGS_DIR
+              value: "/workspace/logs"
             # -- Docker via DinD sidecar over TCP --
             - name: DOCKER_HOST
               value: "tcp://localhost:2375"

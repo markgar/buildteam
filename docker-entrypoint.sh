@@ -174,10 +174,10 @@ if [ -n "${BUILDTEAM_BLOB_ACCOUNT:-}" ]; then
         --name "$BLOB_SPEC" \
         --file "$SPEC_DEST" \
         --auth-mode login \
-        --no-progress -o none 2>/dev/null; then
+        --no-progress -o none; then
         echo "✓ Spec downloaded"
     else
-        echo "✗ Failed to download spec from blob"
+        echo "✗ Failed to download spec from blob (exit code: $?)"
         exit 1
     fi
 

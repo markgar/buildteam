@@ -4,6 +4,6 @@ metadata:
   name: buildteam-sa
   namespace: default
   annotations:
-    azure.workload.identity/client-id: "14d79474-03b9-43ea-aab0-6da97deb85f2"
+    azure.workload.identity/client-id: "19ffb1d6-c0c0-48a8-85c0-0a5586e6055b"
   labels:
     azure.workload.identity/use: "true"

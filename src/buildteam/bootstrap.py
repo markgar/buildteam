@@ -230,7 +230,7 @@ def _write_requirements_file(builder_dir: str, description: str) -> None:
 
 def _create_tracking_directories(builder_dir: str) -> None:
     """Create tracking directories. Reviews are now tracked via GitHub Issues."""
-    # The reviews/ directory is no longer needed — findings and notes are GitHub Issues.
+    # The reviews/ directory is no longer needed — findings are GitHub Issues.
     # Keeping this function for forward compatibility in case new directories are added.
     console.print("✓ Saved original requirements to REQUIREMENTS.md", style="green")
 

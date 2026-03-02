@@ -567,20 +567,14 @@ def ensure_bug_label_exists() -> None:
 
 
 def ensure_review_labels_exist() -> None:
-    """Create the 'finding' and 'note' labels on the GitHub repo.
+    """Create the 'finding' label on the GitHub repo.
 
-    Idempotent: silently succeeds if the labels already exist.
+    Idempotent: silently succeeds if the label already exists.
     'finding' = actionable code review issue the builder must fix.
-    'note' = observational issue the milestone reviewer evaluates.
     """
     run_cmd(
         ["gh", "label", "create", "finding", "--description", "Code review finding",
          "--color", "0075ca", "--force"],
-        quiet=True,
-    )
-    run_cmd(
-        ["gh", "label", "create", "note", "--description", "Code review note (observation)",
-         "--color", "c5def5", "--force"],
         quiet=True,
     )
 

@@ -109,7 +109,7 @@ def milestonewatch(
 
     Polls logs/milestones.log for newly completed milestones. When one appears,
     pulls latest code and runs a milestone-scoped review covering the full diff,
-    code analysis, note frequency filtering, and stale finding cleanup.
+    code analysis, deduplication, and stale finding cleanup.
     Shuts down when all builders finish.
     """
     if milestone_reviewer_dir:

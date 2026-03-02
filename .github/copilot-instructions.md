@@ -14,7 +14,7 @@ Key distinctions:
 
 - **`copilot-instructions.md` in the source code** — `_generate_copilot_instructions()`, `COPILOT_INSTRUCTIONS_TEMPLATE`, and prompt references to `.github/copilot-instructions.md` all deal with a file generated *inside target project repos* for the builder agent to follow. They are not self-referential to this file.
 - **`SPEC.md`, `BACKLOG.md`, `milestones/`, `DEPLOY.md`, `REVIEW-THEMES.md`** — planning and coordination artifacts that exist *inside target project repos*. This project does not have these files itself.
-- **GitHub Issues** (labels `bug`, `finding`, `note`) — bugs and review findings are tracked as GitHub Issues, not files. These labels are used in target project repos, not this project.
+- **GitHub Issues** (labels `bug`, `finding`) — bugs and review findings are tracked as GitHub Issues, not files. These labels are used in target project repos, not this project.
 - **`builder-N/`, `reviewer-N/`, `milestone-reviewer/`, `tester/`, `validator/`** — separate git clone directories of the *target project*, one per agent. These are working copies created at runtime, not subdirectories of this project.
 - **Prompt templates in `src/buildteam/prompts/`** — instructions sent to Copilot CLI agents operating *on the target project*. They reference target-project files and conventions, not this project's internals.
 

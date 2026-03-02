@@ -68,38 +68,20 @@ _FILING_RULES = (
 )
 
 _COMMIT_FILING_RULES = (
-    "FILING BY SEVERITY: For [bug] and [security] issues, create a GitHub Issue with the "
-    "'finding' label — the builder will see and fix these immediately. Run: "
+    "FILING: File ALL issues as findings — the builder fixes everything. Run: "
     "`gh issue create --title '[finding] <severity>: <summary>' --body '<details>' --label finding,{milestone_label}`. "
-    "For [cleanup] and [robustness] issues, create a GitHub Issue with the 'note' label "
-    "instead — these are per-commit observations that the milestone review will evaluate "
-    "for recurring patterns. Only patterns that recur across 2+ locations get promoted "
-    "to findings for the builder. Run: "
-    "`gh issue create --title '[note] <severity>: <summary>' --body '<details>' --label note,{milestone_label}`. "
     "DEDUP: Before creating issues, check for existing open ones: "
-    "`gh issue list --label finding,note --state open --json number,title --limit 50`. "
+    "`gh issue list --label finding --state open --json number,title --limit 50`. "
     "Do not create duplicate issues for problems already covered. "
 )
 
 _MILESTONE_FILING_RULES = (
-    "FILING WITH FREQUENCY FILTER: The milestone review applies a frequency filter to "
-    "reduce noise for the builder. "
-    "(1) List open note issues: `gh issue list --label note --state open "
-    "--json number,title,body --limit 100`. Read these — they are per-commit "
-    "observations from earlier reviews that were not yet promoted to findings. "
-    "(2) For [bug] and [security] issues: ALWAYS file as a finding issue "
-    "(`gh issue create --title '[finding] ...' --body '...' --label finding,{milestone_label}`) "
-    "regardless of how many times they appear. These are too important to wait. "
-    "(3) For [cleanup] and [robustness] issues: only promote to a finding issue "
-    "if the same class of problem appears in 2+ locations or files across the "
-    "milestone. One-off cleanup or robustness issues that appear only once should "
-    "NOT be promoted — they stay as note issues. "
-    "(4) When you promote a note to a finding, use `gh issue edit <number> "
-    "--remove-label note --add-label finding` to relabel it — this preserves the "
-    "original context. If multiple notes show the same pattern, pick the most "
-    "representative one to promote and close the others with "
-    "`gh issue close <number> --comment 'Consolidated into #<promoted_number>'`. "
-    "Do NOT edit or close issues that belong to other labels (e.g. 'bug'). "
+    "FILING: File ALL issues as findings — [bug], [security], [cleanup], and [robustness] alike. Run: "
+    "`gh issue create --title '[finding] <severity>: <summary>' --body '<details>' --label finding,{milestone_label}`. "
+    "DEDUP: Before creating issues, list all open findings: "
+    "`gh issue list --label finding --state open --json number,title --limit 100`. "
+    "If multiple open findings describe the same underlying problem, close the "
+    "duplicates with `gh issue close <number> --comment 'Duplicate of #<canonical>'`. "
 )
 
 _CONFLICT_RECOVERY = (
@@ -164,14 +146,15 @@ REVIEWER_MILESTONE_PROMPT = (
     "The builder reads this file before every session to avoid repeating mistakes. Rules: "
     "(1) Read the existing REVIEW-THEMES.md first — keep ALL existing themes. Never "
     "remove a theme. Themes persist forever as lessons learned. "
-    "(2) Add new themes when you see a pattern in 2+ commits or files — one-off issues "
-    "stay as findings, not themes. "
+    "(2) Add new themes when you see the same CLASS of problem in 2+ findings "
+    "across this milestone or across prior milestones (check closed findings too). "
+    "A theme describes a recurring model tendency, not a one-off bug. "
     "(3) Keep each entry to one line: pattern name in bold + brief actionable "
     "instruction. "
     "(4) Rewrite the file with all old themes plus any new ones. "
     "Format: a '# Review Themes' heading, a 'Last updated: {milestone_name}' "
     "subline, then a numbered list of all entries (old and new). "
-    "If you created any finding or note issues or updated REVIEW-THEMES.md, "
+    "If you created or closed any finding issues or updated REVIEW-THEMES.md, "
     "commit with message '[reviewer] Milestone review: {milestone_name}', run "
     "git pull --rebase, and push. If the push fails, run git pull --rebase and push "
     "again (retry up to 3 times). If you only created/closed GitHub Issues (no file "
@@ -187,7 +170,7 @@ REVIEWER_MILESTONE_PROMPT = (
 _BRANCH_CONTEXT = (
     "You are reviewing code from feature branch '{branch_name}'. You are currently "
     "on the main branch — do NOT checkout the feature branch. The diffs you review "
-    "use explicit commit SHAs so you can review from main. Your finding and note "
+    "use explicit commit SHAs so you can review from main. Your finding "
     "issues are filed via `gh issue create` (no files to commit for reviews). "
     "Do NOT commit or push any changes. The reviewer is read-only — all fixes go through the builder. "
 )
@@ -208,7 +191,7 @@ REVIEWER_BRANCH_COMMIT_PROMPT = (
     + _SEVERITY_RULES
     + _DOC_RULES
     + _COMMIT_FILING_RULES
-    + "Each finding or note issue must contain in its body: the commit SHA {commit_sha:.8}, the "
+    + "Each finding issue must contain in its body: the commit SHA {commit_sha:.8}, the "
     "severity tag, the file path and line(s), a clear description of the problem "
     "explaining WHY it matters (not just what is wrong), and a concrete suggested fix "
     "with example code when possible. "
@@ -234,7 +217,7 @@ REVIEWER_BRANCH_BATCH_PROMPT = (
     + _SEVERITY_RULES
     + _DOC_RULES
     + _COMMIT_FILING_RULES
-    + "Each finding or note issue must contain in its body: the relevant commit SHA(s), the "
+    + "Each finding issue must contain in its body: the relevant commit SHA(s), the "
     "severity tag, the file path and line(s), a clear description of the problem "
     "explaining WHY it matters, and a concrete suggested fix with example code when "
     "possible. "

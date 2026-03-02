@@ -221,15 +221,15 @@ When `commitwatch` is called without `--builder-id` (or with `--builder-id 0`), 
 
 **Filtering:** Merge commits (except milestone merges) and the reviewer's own commits are automatically skipped.
 
-**Severity-based filing:** [bug] and [security] issues are filed as GitHub Issues with the `finding` label so the builder sees and fixes them immediately. [cleanup] and [robustness] issues are filed as GitHub Issues with the `note` label — per-commit observations that the milestone reviewer later evaluates for recurring patterns.
+**Finding filing:** All issues — [bug], [security], [cleanup], and [robustness] — are filed as GitHub Issues with the `finding` label. The builder fixes everything.
 
 **Single commit prompt:**
 
-> ...reviews the diff on the feature branch... For [bug] and [security] issues, create GitHub Issues with `--label finding`. For [cleanup] and [robustness] issues, create GitHub Issues with `--label note` instead — these are observations that the milestone review will evaluate for patterns. Only commit if there are [doc] fixes; issue creation does not require commits.
+> ...reviews the diff on the feature branch... File all issues as GitHub Issues with `--label finding`. Do not commit or push any changes — your only output is GitHub Issues.
 
 **Batched commits prompt (2+ commits):**
 
-> ...reviews the combined diff... Same severity-based filing: GitHub Issues with `--label finding` for [bug]/[security], `--label note` for [cleanup]/[robustness]. Only commit if there are [doc] fixes.
+> ...reviews the combined diff... File all issues as GitHub Issues with `--label finding`. Do not commit or push any changes — your only output is GitHub Issues.
 
 **Trigger:** Polls every 10 seconds for new branch activity (branch mode) or new commits on main (legacy mode)  
 **Scope:** Per-commit diff for individual reviews; combined diff for batched reviews  
@@ -249,14 +249,11 @@ When a milestone completes (all tasks checked in the milestone file), the milest
 
 **Code analysis:** Before the milestone review prompt runs, the milestone reviewer invokes `run_milestone_analysis()` from `code_analysis.py` — a tree-sitter-based structural analysis of all files changed in the milestone. It checks for long functions, deeply nested code, large files, and other structural issues across Python, JS/TS, and C#. The analysis results are included in the milestone review prompt so the reviewer has both diff context and structural quality data.
 
-**Frequency filter:** The milestone review reads all open GitHub Issues with the `note` label from per-commit reviews and applies a frequency filter before filing findings for the builder:
-- [bug] and [security]: Always filed as GitHub Issues with `--label finding` regardless of frequency
-- [cleanup] and [robustness]: Only promoted from `note` to `finding` (via `gh issue edit --remove-label note --add-label finding`) if the same class of problem appears in 2+ locations or files across the milestone. One-off issues stay as notes.
-- When promoting a recurring pattern, the reviewer consolidates the notes into a single finding issue describing the pattern and all affected locations, and closes the original note issues.
+**Finding deduplication:** The milestone reviewer lists all open findings and closes duplicates that describe the same underlying problem, keeping the builder's work list clean.
 
 **Stale finding cleanup:** The milestone reviewer closes finding issues that have already been fixed in the code (via `gh issue close` with a comment), keeping the builder's work list clean.
 
-> ...reviews the full milestone diff... Reads open `note`-labeled GitHub Issues for per-commit observations. Files new GitHub Issues with `--label finding` for [bug]/[security] always, and promotes `note` issues to `finding` only when the pattern recurs in 2+ locations. Closes stale finding issues. Commit with message 'Milestone review: {milestone_name}', run git pull --rebase, and push.
+> ...reviews the full milestone diff... Files all issues as GitHub Issues with `--label finding`. Deduplicates and closes stale findings. Updates REVIEW-THEMES.md with recurring patterns. Commit with message 'Milestone review: {milestone_name}', run git pull --rebase, and push.
 
 **Trigger:** Polls `logs/milestones.log` every 10 seconds (configurable via `--interval`) for newly completed milestones  
 **Scope:** Full milestone diff (`milestone_start_sha..milestone_end_sha`)  
@@ -343,9 +340,9 @@ The multi-agent system is designed around cumulative knowledge. Several mechanis
 
 The validator writes DEPLOY.md after each milestone — Dockerfile configuration, required env vars, port mappings, startup sequence, health check details, and known gotchas. The builder reads DEPLOY.md before every session to stay compatible with deployment requirements. Each milestone's validation run inherits all knowledge from prior runs, so container builds and runtime validation get progressively more reliable. What was a painful discovery in milestone 1 becomes a documented fact for milestone 2.
 
-### Review Signal Filtering (notes → findings)
+### Direct Finding Filing
 
-Per-commit reviews catch every issue but split them by urgency. [bug] and [security] issues are filed as GitHub Issues with the `finding` label so the builder sees and fixes them immediately — these are too important to wait. [cleanup] and [robustness] issues are filed as GitHub Issues with the `note` label — observational records that the builder does not act on directly. When a milestone completes, the milestone review reads all accumulated notes and applies a frequency filter: only patterns that recurred across 2+ locations or files get promoted to `finding` (via relabeling) for the builder. One-off cleanup issues stay as notes. This means the builder spends fix cycles on systemic problems, not isolated nitpicks, and the signal-to-noise ratio of review feedback improves over time as the reviewer learns what patterns actually recur.
+All review issues — [bug], [security], [cleanup], and [robustness] — are filed as findings. The builder fixes everything. This eliminates the overhead of a two-tier severity system and ensures no actionable issues are left unaddressed. The milestone reviewer deduplicates findings and closes stale ones, keeping the builder's work list clean.
 
 ### Review Themes (REVIEW-THEMES.md)
 
@@ -366,8 +363,8 @@ The builder updates the project's copilot-instructions.md whenever project struc
 - **Commit message tagging:** Every agent prefixes its commit messages with its name in brackets — `[builder]`, `[reviewer]`, `[tester]`, `[validator]`, `[planner]`, `[bootstrap]`. This makes it easy to see who did what in `git log`.
 - The **Planner** runs on demand via `plan`. It assesses project state (fresh / continuing / evolving), manages BACKLOG.md (story queue with three-state tracking: `[ ]` unclaimed, `[N]` claimed by builder N, `[x]` completed), updates SPEC.md if new requirements are detected, then writes one milestone file per story in `milestones/`. It never writes application code.
 - The **Builder** runs in a claim loop. Each builder claims a story from BACKLOG.md (`[N]`), calls the planner to expand it into a milestone, completes all tasks, marks the story done (`[x]`), and loops. When no eligible stories remain, writes `logs/builder-N.done`.
-- The **Branch-Attached Reviewer** (one per builder, `reviewer-N/`) watches the builder's feature branch and reviews commits in real time. When the branch is merged and deleted, the reviewer catches up on any missed commits from main via the milestone tag. The builder does not wait for the reviewer. [bug]/[security] issues are filed as GitHub Issues with `--label finding` for the builder; [cleanup]/[robustness] issues are filed as GitHub Issues with `--label note` for the milestone reviewer to evaluate. Non-code issues ([doc]: stale docs, misleading comments) are fixed directly (except DEPLOY.md — that gets filed as a finding).
-- The **Milestone Reviewer** runs cross-cutting reviews when a milestone completes. It reads accumulated `note`-labeled GitHub Issues, promotes recurring patterns to `finding` (via `gh issue edit --remove-label note --add-label finding`), and closes stale finding issues. It also updates REVIEW-THEMES.md.
+- The **Branch-Attached Reviewer** (one per builder, `reviewer-N/`) watches the builder's feature branch and reviews commits in real time. When the branch is merged and deleted, the reviewer catches up on any missed commits from main via the milestone tag. The builder does not wait for the reviewer. All issues are filed as GitHub Issues with `--label finding` for the builder. Non-code issues ([doc]: stale docs, misleading comments) are filed as findings so the builder can fix them (except DEPLOY.md — that gets filed as a finding for the validator).
+- The **Milestone Reviewer** runs cross-cutting reviews when a milestone completes. It deduplicates findings, closes stale finding issues, and updates REVIEW-THEMES.md.
 - The **Tester** runs scoped tests when a milestone completes, focusing on changed files. It runs the test suite only — it does not start the app or test live endpoints. Files bugs as GitHub Issues with `--label bug`. Exits when the builder finishes.
 - The **Validator** builds the app in a Docker container after each milestone, starts it, and tests it against SPEC.md acceptance criteria. Files bugs as GitHub Issues with `--label bug`. Persists deployment knowledge in DEPLOY.md. Exits when the builder finishes.
 - **Issue builder (multi-builder):** When multiple builders run concurrently (`--builders N` with N > 1), the last builder (builder-N) is a dedicated issue builder. It runs on main and exclusively fixes bugs and findings from merged milestones — it never claims stories. Milestone builders (builder-1 through builder-{N−1}) skip issue fixing entirely. The default is 2 builders (1 milestone builder + 1 issue builder).

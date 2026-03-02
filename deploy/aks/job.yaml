@@ -19,7 +19,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: buildteam-minimal-python-api
+  name: buildteam-autodev
   namespace: default
 spec:
   backoffLimit: 0  # Don't retry on failure
@@ -64,11 +64,11 @@ spec:
             - name: BUILDTEAM_BLOB_ACCOUNT
               value: "stautodevqqq"
             - name: BUILDTEAM_BLOB_CONTAINER
-              value: "sample-specs"
+              value: "autodev"
             - name: BUILDTEAM_BLOB_SPEC
-              value: "minimal-python-api.md"
+              value: "REQUIREMENTS.md"
             - name: BUILDTEAM_BLOB_LOGS_CONTAINER
-              value: "minimal-python-api"
+              value: "autodev-logs"
             # -- Logs dir (default /workspace/data/logs is read-only ConfigMap) --
             - name: BUILDTEAM_LOGS_DIR
               value: "/workspace/logs"
@@ -79,9 +79,11 @@ spec:
           args:
             - "go"
             - "--directory"
-            - "minimal-python-api"
+            - "autodev"
             - "--model"
             - "claude-sonnet-4.6"
+            - "--builders"
+            - "3"
             - "--spec-file"
             - "/workspace/spec.md"
           resources:

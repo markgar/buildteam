@@ -121,23 +121,9 @@ dotnet --version &>/dev/null && echo "✓ dotnet $(dotnet --version)" || echo "�
 node --version &>/dev/null && echo "✓ node $(node --version)" || echo "⚠ node not available"
 
 # --- Run ID for log organization ---
-# BUILDTEAM_RUN_ID groups all logs under a blob "folder" so runs don't collide.
-# If not set, extract the --directory value from the command line as a fallback.
-if [ -z "${BUILDTEAM_RUN_ID:-}" ]; then
-    # Parse --directory from $@ (handles both --directory foo and --directory=foo)
-    for i in "$@"; do
-        if [ "$_next_is_dir" = "1" ]; then
-            BUILDTEAM_RUN_ID="$i"
-            break
-        fi
-        case "$i" in
-            --directory=*) BUILDTEAM_RUN_ID="${i#--directory=}"; break ;;
-            --directory)   _next_is_dir=1 ;;
-        esac
-    done
-    unset _next_is_dir
-fi
-BUILDTEAM_RUN_ID="${BUILDTEAM_RUN_ID:-unknown}"
+# BUILDTEAM_RUN_ID identifies this run within the project's blob container.
+# If not set, defaults to a UTC timestamp so manual runs get unique IDs.
+BUILDTEAM_RUN_ID="${BUILDTEAM_RUN_ID:-$(date -u +%Y%m%d-%H%M%S)}"
 export BUILDTEAM_RUN_ID
 echo "✓ Run ID: ${BUILDTEAM_RUN_ID}"
 
@@ -155,13 +141,13 @@ export BUILDTEAM_LOGS_DIR="$LOGS_DIR"
 #   BUILDTEAM_BLOB_CONTAINER   - blob container name (default: "specs")
 #   BUILDTEAM_BLOB_SPEC        - blob name for the spec file (default: "spec.md")
 #   BUILDTEAM_SPEC_DEST        - local path to write the spec (default: "/workspace/data/spec.md")
-#   BUILDTEAM_BLOB_LOGS_CONTAINER - blob container for logs (default: same as BUILDTEAM_BLOB_CONTAINER)
-#   BUILDTEAM_RUN_ID            - blob path prefix for this run (set above)
+#   BUILDTEAM_BLOB_LOGS_CONTAINER - blob container for logs (project-level; default: same as BUILDTEAM_BLOB_CONTAINER)
+#   BUILDTEAM_RUN_ID            - run folder within the logs container (set above, defaults to timestamp)
 SYNC_PID=""
 if [ -n "${BUILDTEAM_BLOB_ACCOUNT:-}" ]; then
     BLOB_CONTAINER="${BUILDTEAM_BLOB_CONTAINER:-specs}"
     BLOB_SPEC="${BUILDTEAM_BLOB_SPEC:-spec.md}"
-    SPEC_DEST="${BUILDTEAM_SPEC_DEST:-/workspace/data/spec.md}"
+    SPEC_DEST="${BUILDTEAM_SPEC_DEST:-/workspace/spec.md}"
     BLOB_LOGS_CONTAINER="${BUILDTEAM_BLOB_LOGS_CONTAINER:-$BLOB_CONTAINER}"
     BLOB_LOGS_PREFIX="${BUILDTEAM_RUN_ID}"
 
@@ -180,6 +166,12 @@ if [ -n "${BUILDTEAM_BLOB_ACCOUNT:-}" ]; then
         echo "✗ Failed to download spec from blob (exit code: $?)"
         exit 1
     fi
+
+    # Ensure logs container exists (no-op if it already does)
+    az storage container create \
+        --account-name "$BUILDTEAM_BLOB_ACCOUNT" \
+        --name "$BLOB_LOGS_CONTAINER" \
+        --auth-mode login -o none 2>/dev/null || true
 
     # Background log sync — uploads logs/ to blob every 60 seconds
     (

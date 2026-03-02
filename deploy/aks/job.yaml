@@ -43,10 +43,6 @@ spec:
             readOnly: true
             volumeAttributes:
               secretProviderClass: buildteam-kv-secrets
-        # Spec file from ConfigMap
-        - name: spec
-          configMap:
-            name: buildteam-spec
 
       containers:
         # --- Buildteam container ---
@@ -55,9 +51,6 @@ spec:
           volumeMounts:
             - name: kv-secrets
               mountPath: /mnt/secrets
-              readOnly: true
-            - name: spec
-              mountPath: /workspace/data
               readOnly: true
           env:
             - name: GITHUB_TOKEN
@@ -74,6 +67,8 @@ spec:
               value: "sample-specs"
             - name: BUILDTEAM_BLOB_SPEC
               value: "minimal-python-api.md"
+            - name: BUILDTEAM_BLOB_LOGS_CONTAINER
+              value: "minimal-python-api"
             # -- Logs dir (default /workspace/data/logs is read-only ConfigMap) --
             - name: BUILDTEAM_LOGS_DIR
               value: "/workspace/logs"
@@ -88,7 +83,7 @@ spec:
             - "--model"
             - "claude-sonnet-4.6"
             - "--spec-file"
-            - "/workspace/data/spec.md"
+            - "/workspace/spec.md"
           resources:
             requests:
               cpu: "1"

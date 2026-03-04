@@ -4,11 +4,11 @@ set -euo pipefail
 # prepare-spec.sh — Upload a spec file to a project's blob container via AKS
 #
 # Usage:
-#   ./deploy/aks/prepare-spec.sh <project-name> <spec-file>
+#   ./buildteam-build-on/aks/prepare-spec.sh <project-name> <spec-file>
 #
 # Examples:
-#   ./deploy/aks/prepare-spec.sh log-viewer tests/harness/simple/sample_spec_log_viewer_api.md
-#   ./deploy/aks/prepare-spec.sh autodev tests/harness/full/sample_spec_autodev.md
+#   ./buildteam-build-on/aks/prepare-spec.sh log-viewer tests/harness/simple/sample_spec_log_viewer_api.md
+#   ./buildteam-build-on/aks/prepare-spec.sh autodev tests/harness/full/sample_spec_autodev.md
 #
 # What it does:
 #   1. Connects to AKS (gets credentials if needed)
@@ -165,7 +165,7 @@ kubectl delete configmap "$CONFIGMAP_NAME" --ignore-not-found 2>/dev/null || tru
 # ---------------------------------------------------------------------------
 echo ""
 echo "==> Spec ready! Now launch the build:"
-echo "    ./deploy/aks/launch.sh $PROJECT_NAME"
+echo "    ./buildteam-build-on/aks/launch.sh $PROJECT_NAME"
 echo ""
 echo "  Or with options:"
-echo "    ./deploy/aks/launch.sh $PROJECT_NAME --model claude-opus-4.6 --builders 2"
+echo "    ./buildteam-build-on/aks/launch.sh $PROJECT_NAME --model claude-opus-4.6 --builders 2"

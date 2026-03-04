@@ -90,6 +90,10 @@ End-to-end tests run via `python tests/harness/run_test.py`. See AGENTS.md § "T
 
 When asked to run or monitor the harness, do NOT run it in a background terminal. Have the user run it in a visible terminal and monitor progress by reading log files (`builder.log`, `orchestrator.log`, `reviewer.log`, `tester.log`) in the run's `logs/` directory.
 
+## Web research
+
+When fetching web pages for research, prepend `https://r.jina.ai/` to URLs to get Markdown instead of HTML. For web searches, use `https://s.jina.ai/` followed by the search query. Prefer `s.jina.ai` search over fetching individual pages — a single search returns multiple results as Markdown in one call, which is faster than fetching pages one at a time. When deep research is needed, do multiple `s.jina.ai` searches with different query angles, then fetch the most promising individual URLs via `r.jina.ai` for full content.
+
 ## Conventions
 
 - Agent prompts are append-only format strings in `prompts/`. Use `.format()` for interpolation.

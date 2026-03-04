@@ -37,6 +37,37 @@ _REVIEW_CHECKLIST = (
     "you should ignore — everything else that degrades production quality is fair game. "
 )
 
+_ARCHITECTURE_CHECKLIST = (
+    "ARCHITECTURE CHECKLIST — examine changed code against these design principles. "
+    "Only flag violations that are clearly harmful, not stylistic preferences: "
+    "(1) LAYER VIOLATIONS (Separation of Concerns): Business logic must not leak into "
+    "controllers/handlers, data access must not appear in UI components, and HTTP/framework "
+    "concerns (request/response objects, status codes, headers) must not penetrate domain "
+    "services. Flag when a single class/function mixes two or more architectural layers. "
+    "(2) SINGLE RESPONSIBILITY (class/module level): Flag classes that own 3+ unrelated "
+    "responsibilities — e.g. a UserService that handles authentication, email sending, "
+    "AND report generation. Do NOT flag classes that are large but cohesive (a repository "
+    "with many query methods for one entity is fine). "
+    "(3) DEPENDENCY INVERSION: Flag concrete instantiation of infrastructure dependencies "
+    "inside business logic — e.g. `new SqlConnection()`, `new HttpClient()`, "
+    "`new SmtpClient()` hard-coded in a service. Only flag when it harms testability or "
+    "makes swapping implementations impossible. Framework-managed DI (constructor injection) "
+    "is the expected pattern. "
+    "(4) LAW OF DEMETER (minimal coupling): Flag deep object traversal chains "
+    "(3+ dots: `order.getCustomer().getAddress().getCity()`). The fix is to expose a "
+    "direct method or pass the needed value. Do NOT flag fluent builder/query chains "
+    "(LINQ, stream pipelines, builder patterns) — those are intentional API design. "
+    "(5) COMPOSITION OVER INHERITANCE: Flag inheritance hierarchies deeper than 2 levels, "
+    "or base classes that exist only to share 1-2 utility methods. Suggest composition "
+    "(injecting a helper, using mixins/traits, or standalone functions) when inheritance "
+    "adds coupling without modeling a true is-a relationship. "
+    "(6) YAGNI (You Aren't Gonna Need It): Flag premature abstractions — interfaces "
+    "with only one implementation and no planned variation, generic frameworks wrapping "
+    "a single use case, unused extension points, strategy/factory/observer patterns "
+    "applied where a simple function call suffices. LLM-generated code is especially "
+    "prone to over-engineering; call it out. "
+)
+
 _SEVERITY_RULES = (
     "SEVERITY: Prefix each finding with [bug] if it causes incorrect behavior or data "
     "loss under normal usage, [security] if it is a security vulnerability or exposes "
@@ -111,10 +142,11 @@ REVIEWER_MILESTONE_PROMPT = (
     "doesn't), API contracts that don't match between caller and callee, duplicated "
     "logic introduced across separate commits, missing integration between components, "
     "naming inconsistencies across the milestone's code, error handling gaps that only "
-    "appear when viewing the full picture, architectural issues in how the pieces fit "
-    "together, dead code — functions, methods, or classes that were added or modified "
+    "appear when viewing the full picture, dead code — functions, methods, or classes that were added or modified "
     "during the milestone but are never called from any endpoint or entry point, and "
-    "missing edge case handling that would cause runtime failures in production. "    "HEALTH ENDPOINT CONTRACT: If the project has a /health endpoint, verify that "
+    "missing edge case handling that would cause runtime failures in production. "
+    + _ARCHITECTURE_CHECKLIST
+    + "HEALTH ENDPOINT CONTRACT: If the project has a /health endpoint, verify that "
     "every external dependency introduced or modified in this milestone (storage "
     "clients, database connections, caches, message queues, etc.) is actively checked "
     "by the health endpoint. A milestone that adds a new service client but does not "
@@ -187,8 +219,7 @@ REVIEWER_BRANCH_COMMIT_PROMPT = (
     "diff, and do NOT look at older changes. Focus exclusively on the added and modified "
     "lines shown in the diff. Use the surrounding context lines only to understand what "
     "the changed code does. "
-    + _REVIEW_CHECKLIST
-    + _SEVERITY_RULES
+    + _REVIEW_CHECKLIST    + _ARCHITECTURE_CHECKLIST    + _SEVERITY_RULES
     + _DOC_RULES
     + _COMMIT_FILING_RULES
     + "Each finding issue must contain in its body: the commit SHA {commit_sha:.8}, the "
@@ -214,6 +245,7 @@ REVIEWER_BRANCH_BATCH_PROMPT = (
     "modified lines shown in the diff. Use the surrounding context lines only to "
     "understand what the changed code does. "
     + _REVIEW_CHECKLIST
+    + _ARCHITECTURE_CHECKLIST
     + _SEVERITY_RULES
     + _DOC_RULES
     + _COMMIT_FILING_RULES

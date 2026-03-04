@@ -9,8 +9,8 @@
 #   __BUILDERS__      — number of builders (e.g. "2")
 #
 # To launch a build:
-#   ./deploy/aks/prepare-spec.sh <project-name> <spec-file>
-#   ./deploy/aks/launch.sh <project-name> [--model X] [--builders N]
+#   ./buildteam-build-on/aks/prepare-spec.sh <project-name> <spec-file>
+#   ./buildteam-build-on/aks/launch.sh <project-name> [--model X] [--builders N]
 
 apiVersion: batch/v1
 kind: Job

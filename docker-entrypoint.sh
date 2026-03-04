@@ -141,15 +141,13 @@ export BUILDTEAM_LOGS_DIR="$LOGS_DIR"
 #   BUILDTEAM_BLOB_CONTAINER   - blob container name (default: "specs")
 #   BUILDTEAM_BLOB_SPEC        - blob name for the spec file (default: "spec.md")
 #   BUILDTEAM_SPEC_DEST        - local path to write the spec (default: "/workspace/data/spec.md")
-#   BUILDTEAM_BLOB_LOGS_CONTAINER - blob container for logs (project-level; default: same as BUILDTEAM_BLOB_CONTAINER)
-#   BUILDTEAM_RUN_ID            - run folder within the logs container (set above, defaults to timestamp)
+#   BUILDTEAM_RUN_ID            - run folder within the container's logs/ prefix (set above, defaults to timestamp)
 SYNC_PID=""
 if [ -n "${BUILDTEAM_BLOB_ACCOUNT:-}" ]; then
     BLOB_CONTAINER="${BUILDTEAM_BLOB_CONTAINER:-specs}"
     BLOB_SPEC="${BUILDTEAM_BLOB_SPEC:-spec.md}"
     SPEC_DEST="${BUILDTEAM_SPEC_DEST:-/workspace/spec.md}"
-    BLOB_LOGS_CONTAINER="${BUILDTEAM_BLOB_LOGS_CONTAINER:-$BLOB_CONTAINER}"
-    BLOB_LOGS_PREFIX="${BUILDTEAM_RUN_ID}"
+    BLOB_LOGS_PREFIX="logs/${BUILDTEAM_RUN_ID}"
 
     # Download spec
     mkdir -p "$(dirname "$SPEC_DEST")"
@@ -167,19 +165,13 @@ if [ -n "${BUILDTEAM_BLOB_ACCOUNT:-}" ]; then
         exit 1
     fi
 
-    # Ensure logs container exists (no-op if it already does)
-    az storage container create \
-        --account-name "$BUILDTEAM_BLOB_ACCOUNT" \
-        --name "$BLOB_LOGS_CONTAINER" \
-        --auth-mode login -o none 2>/dev/null || true
-
     # Background log sync — uploads logs/ to blob every 60 seconds
     (
         while true; do
             sleep 60
             az storage blob upload-batch \
                 --account-name "$BUILDTEAM_BLOB_ACCOUNT" \
-                --destination "$BLOB_LOGS_CONTAINER" \
+                --destination "$BLOB_CONTAINER" \
                 --destination-path "${BLOB_LOGS_PREFIX}/" \
                 --source "$LOGS_DIR" \
                 --auth-mode login \
@@ -188,7 +180,7 @@ if [ -n "${BUILDTEAM_BLOB_ACCOUNT:-}" ]; then
         done
     ) &
     SYNC_PID=$!
-    echo "✓ Background log sync started (PID $SYNC_PID, every 60s → ${BUILDTEAM_BLOB_ACCOUNT}/${BLOB_LOGS_CONTAINER}/${BLOB_LOGS_PREFIX}/)"
+    echo "✓ Background log sync started (PID $SYNC_PID, every 60s → ${BUILDTEAM_BLOB_ACCOUNT}/${BLOB_CONTAINER}/${BLOB_LOGS_PREFIX}/)"
 fi
 
 # --- Run buildteam ---
@@ -202,7 +194,7 @@ if [ -n "$SYNC_PID" ]; then
     echo "Final log sync..."
     az storage blob upload-batch \
         --account-name "$BUILDTEAM_BLOB_ACCOUNT" \
-        --destination "${BLOB_LOGS_CONTAINER}" \
+        --destination "${BLOB_CONTAINER}" \
         --destination-path "${BLOB_LOGS_PREFIX}/" \
         --source "${LOGS_DIR}" \
         --auth-mode login \

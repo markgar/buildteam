@@ -234,6 +234,8 @@ def test_allowed_models_accepts_both_formats():
     assert "claude-opus-4.6-fast" in ALLOWED_MODELS
     assert "Claude Sonnet 4.6" in ALLOWED_MODELS
     assert "claude-sonnet-4.6" in ALLOWED_MODELS
+    assert "Auto" in ALLOWED_MODELS
+    assert "auto" in ALLOWED_MODELS    
 
 
 # --- resolve_agent_models ---

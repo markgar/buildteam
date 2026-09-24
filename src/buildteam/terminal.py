@@ -1,5 +1,6 @@
 """Terminal spawning helper for launching agent commands in new windows."""
 
+import shlex
 import os
 import shutil
 import subprocess
@@ -39,7 +40,7 @@ def build_agent_script(working_dir: str, command: str, platform: str, model: str
     if copilot_model:
         lines.append(f"export COPILOT_MODEL='{copilot_model}'")
     lines.append(f"cd '{working_dir}'")
-    lines.append(f"buildteam {command}")
+    lines.append(f"{shlex.quote(sys.executable)} -m buildteam {command}")
     if platform == "linux":
         lines.append("exec bash")
     return "\n".join(lines) + "\n"
